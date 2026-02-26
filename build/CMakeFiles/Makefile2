@@ -85,12 +85,12 @@ clean: CMakeFiles/semGame.dir/clean
 CMakeFiles/semGame.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/semGame.dir/build.make CMakeFiles/semGame.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/semGame.dir/build.make CMakeFiles/semGame.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=1,2 "Built target semGame"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=1,2,3 "Built target semGame"
 .PHONY : CMakeFiles/semGame.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/semGame.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start J:/cpp/semGame/build/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start J:/cpp/semGame/build/CMakeFiles 3
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/semGame.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start J:/cpp/semGame/build/CMakeFiles 0
 .PHONY : CMakeFiles/semGame.dir/rule
@@ -102,7 +102,7 @@ semGame: CMakeFiles/semGame.dir/rule
 # codegen rule for target.
 CMakeFiles/semGame.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/semGame.dir/build.make CMakeFiles/semGame.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=1,2 "Finished codegen for target semGame"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=1,2,3 "Finished codegen for target semGame"
 .PHONY : CMakeFiles/semGame.dir/codegen
 
 # clean rule for target.

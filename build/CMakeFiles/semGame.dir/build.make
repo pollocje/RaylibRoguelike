@@ -72,11 +72,26 @@ include CMakeFiles/semGame.dir/flags.make
 CMakeFiles/semGame.dir/codegen:
 .PHONY : CMakeFiles/semGame.dir/codegen
 
+CMakeFiles/semGame.dir/src/Player.cpp.obj: CMakeFiles/semGame.dir/flags.make
+CMakeFiles/semGame.dir/src/Player.cpp.obj: CMakeFiles/semGame.dir/includes_CXX.rsp
+CMakeFiles/semGame.dir/src/Player.cpp.obj: J:/cpp/semGame/src/Player.cpp
+CMakeFiles/semGame.dir/src/Player.cpp.obj: CMakeFiles/semGame.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/semGame.dir/src/Player.cpp.obj"
+	C:/ProgramData/mingw64/mingw64/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/semGame.dir/src/Player.cpp.obj -MF CMakeFiles/semGame.dir/src/Player.cpp.obj.d -o CMakeFiles/semGame.dir/src/Player.cpp.obj -c J:/cpp/semGame/src/Player.cpp
+
+CMakeFiles/semGame.dir/src/Player.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/semGame.dir/src/Player.cpp.i"
+	C:/ProgramData/mingw64/mingw64/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E J:/cpp/semGame/src/Player.cpp > CMakeFiles/semGame.dir/src/Player.cpp.i
+
+CMakeFiles/semGame.dir/src/Player.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/semGame.dir/src/Player.cpp.s"
+	C:/ProgramData/mingw64/mingw64/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S J:/cpp/semGame/src/Player.cpp -o CMakeFiles/semGame.dir/src/Player.cpp.s
+
 CMakeFiles/semGame.dir/src/main.cpp.obj: CMakeFiles/semGame.dir/flags.make
 CMakeFiles/semGame.dir/src/main.cpp.obj: CMakeFiles/semGame.dir/includes_CXX.rsp
 CMakeFiles/semGame.dir/src/main.cpp.obj: J:/cpp/semGame/src/main.cpp
 CMakeFiles/semGame.dir/src/main.cpp.obj: CMakeFiles/semGame.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/semGame.dir/src/main.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/semGame.dir/src/main.cpp.obj"
 	C:/ProgramData/mingw64/mingw64/bin/c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/semGame.dir/src/main.cpp.obj -MF CMakeFiles/semGame.dir/src/main.cpp.obj.d -o CMakeFiles/semGame.dir/src/main.cpp.obj -c J:/cpp/semGame/src/main.cpp
 
 CMakeFiles/semGame.dir/src/main.cpp.i: cmake_force
@@ -89,17 +104,19 @@ CMakeFiles/semGame.dir/src/main.cpp.s: cmake_force
 
 # Object files for target semGame
 semGame_OBJECTS = \
+"CMakeFiles/semGame.dir/src/Player.cpp.obj" \
 "CMakeFiles/semGame.dir/src/main.cpp.obj"
 
 # External object files for target semGame
 semGame_EXTERNAL_OBJECTS =
 
+semGame.exe: CMakeFiles/semGame.dir/src/Player.cpp.obj
 semGame.exe: CMakeFiles/semGame.dir/src/main.cpp.obj
 semGame.exe: CMakeFiles/semGame.dir/build.make
 semGame.exe: C:/raylib/raylib/src/libraylib.a
 semGame.exe: CMakeFiles/semGame.dir/linkLibs.rsp
 semGame.exe: CMakeFiles/semGame.dir/objects1.rsp
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable semGame.exe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=J:/cpp/semGame/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable semGame.exe"
 	"C:/Program Files/CMake/bin/cmake.exe" -E rm -f CMakeFiles/semGame.dir/objects.a
 	C:/ProgramData/mingw64/mingw64/bin/ar.exe qc CMakeFiles/semGame.dir/objects.a @CMakeFiles/semGame.dir/objects1.rsp
 	C:/ProgramData/mingw64/mingw64/bin/c++.exe -Wl,--whole-archive CMakeFiles/semGame.dir/objects.a -Wl,--no-whole-archive -o semGame.exe -Wl,--out-implib,libsemGame.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles/semGame.dir/linkLibs.rsp

@@ -1,3 +1,4 @@
+#include "Player.h"
 #include "raylib.h"
 
 const int screenWidth = 800;
@@ -13,12 +14,16 @@ int main() {
   InitWindow(screenWidth, screenHeight, "semGame");
   SetTargetFPS(30);
 
+  // Create Player on Start
+  Player player;
+
   while (!WindowShouldClose()) {
 
     BeginDrawing();
 
     ClearBackground(BLACK);
     drawGrid(screenWidth, screenHeight, 80, 45);
+    player.drawPlayer();
 
     EndDrawing();
   }

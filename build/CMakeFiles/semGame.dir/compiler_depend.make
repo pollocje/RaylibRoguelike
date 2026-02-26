@@ -10,7 +10,8 @@ CMakeFiles/semGame.dir/src/main.cpp.obj: J:/cpp/semGame/src/main.cpp \
   C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/sdks/_mingw_ddk.h \
   C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/stdarg.h \
   C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/vadefs.h \
-  C:/raylib/raylib/src/raylib.h
+  C:/raylib/raylib/src/raylib.h \
+  J:/cpp/semGame/src/Player.h
 
 
 J:/cpp/semGame/src/main.cpp:
@@ -32,3 +33,5 @@ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/_mingw_stdarg.h:
 C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/vadefs.h:
 
 C:/raylib/raylib/src/raylib.h:
+
+J:/cpp/semGame/src/Player.h:

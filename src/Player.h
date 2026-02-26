@@ -13,6 +13,8 @@ private:
 public:
   // Constructor
   Player();
+  void drawPlayer();
+  void movement();
 };
 
 #endif

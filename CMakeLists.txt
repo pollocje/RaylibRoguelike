@@ -11,7 +11,13 @@ set(RAYLIB_LIB "C:/raylib/raylib/src/libraylib.a")
 
 include_directories(${RAYLIB_INCLUDE})
 
-add_executable(semGame src/main.cpp)
+# --- ADDED THIS PART ---
+# This finds all .cpp files in your src folder and stores them in a variable called SOURCES
+file(GLOB SOURCES "src/*.cpp")
+
+# Update add_executable to use the ${SOURCES} variable
+add_executable(semGame ${SOURCES})
+# -----------------------
 
 target_link_libraries(semGame ${RAYLIB_LIB} opengl32 gdi32 winmm)
 
