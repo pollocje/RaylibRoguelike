@@ -1,0 +1,3 @@
+J:/cpp/semGame/build/CMakeFiles/semGame.dir
+J:/cpp/semGame/build/CMakeFiles/edit_cache.dir
+J:/cpp/semGame/build/CMakeFiles/rebuild_cache.dir

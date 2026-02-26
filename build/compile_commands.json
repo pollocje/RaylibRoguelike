@@ -1,0 +1,8 @@
+[
+{
+  "directory": "J:/cpp/semGame/build",
+  "command": "C:/ProgramData/mingw64/mingw64/bin/c++.exe  @CMakeFiles/semGame.dir/includes_CXX.rsp -std=gnu++17 -o CMakeFiles/semGame.dir/src/main.cpp.obj -c J:/cpp/semGame/src/main.cpp",
+  "file": "J:/cpp/semGame/src/main.cpp",
+  "output": "CMakeFiles/semGame.dir/src/main.cpp.obj"
+}
+]
