@@ -1,4 +1,4 @@
-# Install script for directory: J:/cpp/semGame
+# Install script for directory: J:/cpp/semgame
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

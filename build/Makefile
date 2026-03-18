@@ -57,7 +57,7 @@ RM = "C:/Program Files/CMake/bin/cmake.exe" -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = J:/cpp/semGame
+CMAKE_SOURCE_DIR = J:/cpp/semgame
 
 # The top-level build directory on which CMake was run.
 CMAKE_BINARY_DIR = J:/cpp/semGame/build
@@ -129,6 +129,30 @@ semGame/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/semGame.dir/build.make CMakeFiles/semGame.dir/build
 .PHONY : semGame/fast
 
+src/Map.obj: src/Map.cpp.obj
+.PHONY : src/Map.obj
+
+# target to build an object file
+src/Map.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/semGame.dir/build.make CMakeFiles/semGame.dir/src/Map.cpp.obj
+.PHONY : src/Map.cpp.obj
+
+src/Map.i: src/Map.cpp.i
+.PHONY : src/Map.i
+
+# target to preprocess a source file
+src/Map.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/semGame.dir/build.make CMakeFiles/semGame.dir/src/Map.cpp.i
+.PHONY : src/Map.cpp.i
+
+src/Map.s: src/Map.cpp.s
+.PHONY : src/Map.s
+
+# target to generate assembly for a file
+src/Map.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/semGame.dir/build.make CMakeFiles/semGame.dir/src/Map.cpp.s
+.PHONY : src/Map.cpp.s
+
 src/Player.obj: src/Player.cpp.obj
 .PHONY : src/Player.obj
 
@@ -186,6 +210,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... semGame"
+	@echo "... src/Map.obj"
+	@echo "... src/Map.i"
+	@echo "... src/Map.s"
 	@echo "... src/Player.obj"
 	@echo "... src/Player.i"
 	@echo "... src/Player.s"

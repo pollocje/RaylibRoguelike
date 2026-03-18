@@ -1,4 +1,4 @@
-CMakeFiles/semGame.dir/src/main.cpp.obj: J:/cpp/semgame/src/main.cpp \
+CMakeFiles/semGame.dir/src/Map.cpp.obj: J:/cpp/semgame/src/Map.cpp \
  J:/cpp/semgame/src/Map.h \
  C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/vector \
  C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/bits/requires_hosted.h \
@@ -60,7 +60,25 @@ CMakeFiles/semGame.dir/src/main.cpp.obj: J:/cpp/semgame/src/main.cpp \
  C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/bits/uses_allocator.h \
  C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/bits/uses_allocator_args.h \
  C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/tuple \
- J:/cpp/semgame/src/Player.h C:/raylib/raylib/src/raylib.h \
+ C:/raylib/raylib/src/raylib.h \
  C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/stdarg.h \
  C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/stdarg.h \
- C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/_mingw_stdarg.h
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/_mingw_stdarg.h \
+ C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/cstdlib \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/stdlib.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/corecrt_wstdlib.h \
+ C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/limits.h \
+ C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/syslimits.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/limits.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/sec_api/stdlib_s.h \
+ C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/stdlib.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/malloc.h \
+ C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/mm_malloc.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/errno.h \
+ C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/bits/std_abs.h \
+ C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/13.2.0/include/c++/ctime \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/time.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/sys/timeb.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/sec_api/sys/timeb_s.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/_timeval.h \
+ C:/ProgramData/mingw64/mingw64/x86_64-w64-mingw32/include/pthread_time.h

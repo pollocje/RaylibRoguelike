@@ -255,7 +255,7 @@ semGame_BINARY_DIR:STATIC=J:/cpp/semGame/build
 semGame_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
-semGame_SOURCE_DIR:STATIC=J:/cpp/semGame
+semGame_SOURCE_DIR:STATIC=J:/cpp/semgame
 
 
 ########################
