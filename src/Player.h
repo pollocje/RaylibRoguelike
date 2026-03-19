@@ -1,7 +1,7 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include "raylib.h"
+#include "MAP.h"
 
 class Player {
 private:
@@ -10,11 +10,15 @@ private:
   int mana;
   int carryWeight;
 
+  // coordinates
+  int gridX;
+  int gridY;
+
 public:
   // Constructor
   Player();
   void drawPlayer();
-  void movement();
+  void movement(Map &mapData);
 };
 
 #endif
