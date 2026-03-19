@@ -1,0 +1,29 @@
+# --- COMPILER SPECIFIC LIBRARIES ---
+# Ignore the actual library binaries so you don't break each other's linkers
+lib/mingw/
+lib/msvc/
+
+# --- VISUAL STUDIO JUNK (For your partner) ---
+.vs/
+out/
+Debug/
+Release/
+x64/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.user
+*.pdb
+*.ilk
+
+# --- MINGW / COMMAND LINE JUNK (For you) ---
+*.o
+*.obj
+*.exe
+build/
+bin/
+
+# --- VIM TEMP FILES ---
+*.swp
+*.swo
+netrwstate.node
