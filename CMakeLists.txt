@@ -1,24 +1,34 @@
 cmake_minimum_required(VERSION 3.15)
-project(semGame)
+project(semGame LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Put exe in the build folder root
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-# Raylib paths
-set(RAYLIB_INCLUDE "C:/raylib/raylib/src")
-set(RAYLIB_LIB "C:/raylib/raylib/src/libraylib.a")
+# Get raylib automatically
+include(FetchContent)
 
-include_directories(${RAYLIB_INCLUDE})
+set(FETCHCONTENT_QUIET OFF)
 
-# --- ADDED THIS PART ---
-# This finds all .cpp files in your src folder and stores them in a variable called SOURCES
+FetchContent_Declare(
+    raylib
+    GIT_REPOSITORY https://github.com/raysan5/raylib.git
+    GIT_TAG 5.5
+)
+
+FetchContent_MakeAvailable(raylib)
+
+# Grab all cpp files in src
 file(GLOB SOURCES "src/*.cpp")
 
-# Update add_executable to use the ${SOURCES} variable
 add_executable(semGame ${SOURCES})
-# -----------------------
 
-target_link_libraries(semGame ${RAYLIB_LIB} opengl32 gdi32 winmm)
+target_link_libraries(semGame PRIVATE raylib)
 
-target_include_directories(semGame PRIVATE ${RAYLIB_INCLUDE})
+# Windows extras
+if (WIN32)
+    target_link_libraries(semGame PRIVATE winmm)
+endif()
