@@ -34,6 +34,8 @@ public:
   void drawMap();
 
   void generate();
+
+  bool isCellWalkable(int targetX, int targetY);
 };
 
 #endif

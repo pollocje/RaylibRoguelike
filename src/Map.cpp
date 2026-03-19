@@ -99,3 +99,17 @@ void Map::drawGrid(int width, int height) {
     DrawLine(0, j + cellH, width, j + cellH, GREEN);
   }
 }
+
+// Collision Checking for player movement
+bool Map::isCellWalkable(int targetX, int targetY) {
+    // Check if target is off the entire resoltuion grid
+    if (targetX < 0 || targetX >= cols || targetY < 0 || targetY >= rows) {
+        return false;
+    }
+
+    if (data[targetY][targetX] == 1) {
+        return false;
+    }
+
+    return true;
+}
