@@ -51,3 +51,14 @@ void Player::movement(Map &mapData) {
     }
   }
 }
+
+void Player::spawn(Map &mapData) {
+  Vector2 gridPos = mapData.getRandomFloorGridPos();
+  gridX = (int)gridPos.x;
+  gridY = (int)gridPos.y;
+}
+
+void Player::setGridPosition(int x, int y) {
+  gridX = x;
+  gridY = y;
+}

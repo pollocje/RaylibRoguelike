@@ -1,9 +1,8 @@
 #ifndef MAP_H
 #define MAP_H
 
+#include "raylib.h"
 #include <vector>
-
-using namespace std;
 
 class Map {
 
@@ -15,9 +14,12 @@ private:
 
   // create grid (list of vectors)
   // 1 = Wall, 0 = Floor
-  vector<vector<int>> data;
+  std::vector<std::vector<int>> data;
 
 public:
+  // Constants for Floor vs Wall
+  const int EMPTY = 0;
+  const int WALL = 1;
   // Constructor
   Map(int screenWidth, int screenHeight);
 
@@ -36,6 +38,14 @@ public:
   void generate();
 
   bool isCellWalkable(int targetX, int targetY);
+
+  Vector2 getRandomFloorGridPos();
+
+  // STAIRS LOGIC
+  int stairsX, stairsY;
+  void spawnStairs();
+  void drawStairs();
+  void forceFloor(int x, int y);
 };
 
 #endif
