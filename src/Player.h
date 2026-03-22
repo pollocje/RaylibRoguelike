@@ -4,6 +4,8 @@
 #include "raylib.h"
 #include "Modifiers.h"
 
+class Map;
+
 class Player {
 private:
     // Position
@@ -30,21 +32,41 @@ private:
     float dodgeChance;
     float xpGainMultiplier;
 
+    // Progression
+    int xp;
+    int reputation;
+
 public:
     // Constructor
     Player();
 
-    void drawPlayer();
-    void movement();
+    void drawPlayer() const;
+    void DrawHUD() const;
+
+    void movement(const Map& map);
 
     // Modifier methods
     void ApplyModifier(const Modifier& modifier);
     void ResetStatsToBase();
 
-    // Utility/gameplay methods
+    // Gameplay methods
+    void TakeDamage(int amount);
+    void Heal(int amount);
+    void GainXP(int baseXP);
+    int GetDamageOutput(int baseDamage) const;
+
+    // Utility methods
     bool TryDodge() const;
     bool TryDoubleDamage() const;
     int GetXPReward(int baseXP) const;
+
+    // Getters
+    int GetCurrentHealth() const;
+    int GetMaxHealth() const;
+    float GetSpeed() const;
+    float GetFireRate() const;
+    int GetXP() const;
+    int GetReputation() const;
 
     // Optional debug helper
     void PrintStats() const;

@@ -54,14 +54,36 @@ int main() {
         player.PrintStats();
     }
 
-    player.movement();
+    // Gameplay method testing
+    if (IsKeyPressed(KEY_H)) {
+        player.TakeDamage(20);
+        player.PrintStats();
+    }
+
+    if (IsKeyPressed(KEY_J)) {
+        player.Heal(15);
+        player.PrintStats();
+    }
+
+    if (IsKeyPressed(KEY_K)) {
+        player.GainXP(100);
+        player.PrintStats();
+    }
+
+    if (IsKeyPressed(KEY_L)) {
+        int damage = player.GetDamageOutput(10);
+        TraceLog(LOG_INFO, TextFormat("Player dealt %d damage", damage));
+    }
+
+    player.movement(map);
 
     BeginDrawing();
 
     ClearBackground(BLACK);
-    player.drawPlayer();
 
     map.drawMap();
+    player.drawPlayer();
+    player.DrawHUD();
 
     EndDrawing();
   }

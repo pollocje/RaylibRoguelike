@@ -35,7 +35,11 @@ public:
 
   void generate();
 
-  bool isCellWalkable(int targetX, int targetY);
+  bool isCellWalkable(int targetX, int targetY) const;
+
+  // Getters for collision/player movement
+  int getCellW() const;
+  int getCellH() const;
 };
 
 #endif

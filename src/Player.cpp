@@ -1,6 +1,8 @@
 #include "Player.h"
 #include "raylib.h"
+#include "Map.h"
 #include <iostream>
+#include <string>
 
 // Constructor
 Player::Player() {
@@ -18,6 +20,9 @@ Player::Player() {
     baseDodgeChance = 0.0f;
     baseXPGainMultiplier = 1.0f;
 
+    xp = 0;
+    reputation = 0;
+
     ResetStatsToBase();
 }
 
@@ -31,15 +36,37 @@ void Player::ResetStatsToBase() {
     xpGainMultiplier = baseXPGainMultiplier;
 }
 
-void Player::drawPlayer() {
+void Player::drawPlayer() const {
     DrawCircle((int)x, (int)y, radius, BLUE);
 }
 
-void Player::movement() {
+void Player::DrawHUD() const {
+    DrawText(TextFormat("Health: %d / %d", currentHealth, maxHealth), 20, 20, 20, WHITE);
+    DrawText(TextFormat("Speed: %.2f", speed), 20, 50, 20, WHITE);
+    DrawText(TextFormat("Fire Rate: %.2f", fireRate), 20, 80, 20, WHITE);
+    DrawText(TextFormat("Luck: %.0f%%", luckChance * 100.0f), 20, 110, 20, WHITE);
+    DrawText(TextFormat("Dodge: %.0f%%", dodgeChance * 100.0f), 20, 140, 20, WHITE);
+    DrawText(TextFormat("XP Gain: %.0f%%", (xpGainMultiplier - 1.0f) * 100.0f), 20, 170, 20, WHITE);
+    DrawText(TextFormat("XP: %d", xp), 20, 200, 20, WHITE);
+    DrawText(TextFormat("Reputation: %d", reputation), 20, 230, 20, WHITE);
+}
+
+void Player::movement(const Map& map) {
+    float nextX = x;
+    float nextY = y;
+
     if (IsKeyDown(KEY_W)) y -= speed;
     if (IsKeyDown(KEY_S)) y += speed;
     if (IsKeyDown(KEY_A)) x -= speed;
     if (IsKeyDown(KEY_D)) x += speed;
+
+    int targetCellX = (int)(nextX / map.getCellW());
+    int targetCellY = (int)(nextY / map.getCellH());
+
+    if (map.isCellWalkable(targetCellX, targetCellY)) {
+        x = nextX;
+        y = nextY;
+    }
 }
 
 void Player::ApplyModifier(const Modifier& modifier) {
@@ -75,6 +102,43 @@ void Player::ApplyModifier(const Modifier& modifier) {
     }
 }
 
+void Player::TakeDamage(int amount) {
+    if (TryDodge()) {
+        std::cout << "Attack dodged!" << std::endl;
+        return;
+    }
+
+    currentHealth -= amount;
+
+    if (currentHealth < 0) {
+        currentHealth = 0;
+    }
+}
+
+void Player::Heal(int amount) {
+    currentHealth += amount;
+
+    if (currentHealth > maxHealth) {
+        currentHealth = maxHealth;
+    }
+}
+
+void Player::GainXP(int baseXP) {
+    int rewardedXP = GetXPReward(baseXP);
+    xp += rewardedXP;
+
+    // simple placeholder reputation gain
+    reputation += rewardedXP / 10;
+}
+
+int Player::GetDamageOutput(int baseDamage) const {
+    if (TryDoubleDamage()) {
+        return baseDamage * 2;
+    }
+
+    return baseDamage;
+}
+
 bool Player::TryDodge() const {
     float roll = GetRandomValue(0, 10000) / 10000.0f;
     return roll < dodgeChance;
@@ -89,6 +153,30 @@ int Player::GetXPReward(int baseXP) const {
     return (int)(baseXP * xpGainMultiplier);
 }
 
+int Player::GetCurrentHealth() const {
+    return currentHealth;
+}
+
+int Player::GetMaxHealth() const {
+    return maxHealth;
+}
+
+float Player::GetSpeed() const {
+    return speed;
+}
+
+float Player::GetFireRate() const {
+    return fireRate;
+}
+
+int Player::GetXP() const {
+    return xp;
+}
+
+int Player::GetReputation() const {
+    return reputation;
+}
+
 void Player::PrintStats() const {
     std::cout << "----- Player Stats -----" << std::endl;
     std::cout << "Max Health: " << maxHealth << std::endl;
@@ -98,4 +186,6 @@ void Player::PrintStats() const {
     std::cout << "Luck Chance: " << luckChance << std::endl;
     std::cout << "Dodge Chance: " << dodgeChance << std::endl;
     std::cout << "XP Gain Multiplier: " << xpGainMultiplier << std::endl;
+    std::cout << "XP: " << xp << std::endl;
+    std::cout << "Reputation: " << reputation << std::endl;
 }
