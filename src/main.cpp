@@ -1,7 +1,7 @@
-// typing stuff here i wonder if it will appear in visual studio
 #include "MainMenu.h"
 #include "Map.h"
 #include "Player.h"
+#include "Transition.h"
 
 #include "raylib.h"
 
@@ -34,7 +34,12 @@ int main() {
   // Initial Stairs Spawn
   gameMap.spawnStairs();
 
+  // Transition Init
+  Transition transition;
+
   while (!WindowShouldClose()) {
+    float dt = GetFrameTime();
+
     // --- 1. UPDATE PHASE (The Brain) ---
     if (!isGameStarted) {
       MainMenu::MainMenuButtons selection = mainMenu.Update();
@@ -43,25 +48,33 @@ int main() {
       if (selection == MainMenu::EXIT)
         break;
     } else {
-      // Game-only logic
-      if (IsKeyPressed(KEY_SPACE)) {
-        gameMap.generate();
-        player.spawn(gameMap);
-        gameMap.spawnStairs();
+      transition.Update(dt);
+
+      if (!transition.IsActive()) {
+        // Game-only logic
+        if (IsKeyPressed(KEY_SPACE)) {
+          gameMap.generate();
+          player.spawn(gameMap);
+          gameMap.spawnStairs();
+        }
+
+        // Check for Stairs Collision
+        if (player.getGridX() == gameMap.stairsX &&
+            player.getGridY() == gameMap.stairsY) {
+          transition.Start("The descent continues...");
+        }
+
+        player.movement(gameMap);
+      } else {
+          // Transition is active, check if we should swap the map
+          if (transition.ShouldSwapMap()) {
+              gameMap.generate();
+              // Force the player's current spot to be a floor tile
+              gameMap.forceFloor(player.getGridX(), player.getGridY());
+              // Move stairs to a new location
+              gameMap.spawnStairs();
+          }
       }
-
-      // Check for Stairs Collision
-      if (player.getGridX() == gameMap.stairsX &&
-          player.getGridY() == gameMap.stairsY) {
-
-        gameMap.generate();
-        // Force the player's current spot to be a floor tile
-        gameMap.forceFloor(player.getGridX(), player.getGridY());
-        // Move stairs to a new location
-        gameMap.spawnStairs();
-      }
-
-      player.movement(gameMap);
     }
 
     // --- 2. DRAW PHASE (The Eyes) ---
@@ -76,6 +89,9 @@ int main() {
       gameMap.drawStairs(); // NEW: Draw Stairs
       player.drawPlayer();
       DrawText("Game is Running!", 10, 10, 20, GREEN);
+
+      // Draw transition overlay
+      transition.Draw();
     }
     EndDrawing();
   }

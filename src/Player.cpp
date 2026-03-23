@@ -1,5 +1,5 @@
 #include "Player.h"
-#include "MAP.h"
+#include "Map.h"
 #include "raylib.h"
 
 // Implement Constructor
