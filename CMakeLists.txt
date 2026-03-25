@@ -26,6 +26,8 @@ file(GLOB SOURCES "src/*.cpp")
 
 add_executable(semGame ${SOURCES} "src/Modifiers.h")
 
+target_include_directories(semGame PRIVATE src)
+
 target_link_libraries(semGame PRIVATE raylib)
 
 # Windows extras

@@ -36,6 +36,10 @@ private:
     int xp;
     int reputation;
 
+  // coordinates
+  int gridX;
+  int gridY;
+
 public:
     // Constructor
     Player();
@@ -70,6 +74,16 @@ public:
 
     // Optional debug helper
     void PrintStats() const;
+  // Constructor
+  Player();
+  void drawPlayer();
+  void movement(Map &mapData);
+  void spawn(Map &mapData);
+  void setGridPosition(int x, int y);
+
+  // Getter functions for coordinates
+  int getGridX() { return gridX; }
+  int getGridY() { return gridY; }
 };
 
 #endif

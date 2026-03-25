@@ -50,15 +50,20 @@ void Map::refine() {
             if (yy != y || xx != x) {
               wallCount += data[yy][xx];
             } else {
-              wallCount++;
+              // Self counts as a wall if it is one, to encourage clusters
+              wallCount += data[y][x];
             }
+          } else {
+            // Treat edges as walls
+            wallCount++;
           }
         }
-        if (wallCount > 4)
-          nextData[y][x] = 1;
-        else
-          nextData[y][x] = 0;
       }
+
+      if (wallCount > 4)
+        nextData[y][x] = 1;
+      else
+        nextData[y][x] = 0;
     }
   }
   data = nextData;
@@ -101,18 +106,73 @@ void Map::drawGrid(int width, int height) {
 }
 
 // Collision Checking for player movement
-bool Map::isCellWalkable(int targetX, int targetY) const {
-    if (targetX < 0 || targetX >= cols || targetY < 0 || targetY >= rows) {
-        return false;
+bool Map::isCellWalkable(int targetX, int targetY) {
+  // Check if target is off the entire resoltuion grid
+  if (targetX < 0 || targetX >= cols || targetY < 0 || targetY >= rows) {
+    return false;
+  }
+
+  if (data[targetY][targetX] == 1) {
+    return false;
+  }
+
+  return true;
+}
+
+Vector2 Map::getRandomFloorGridPos() {
+  int r, c;
+  bool isGoodSpot = false;
+
+  // Try to find a floor tile that is not isolated
+  // (has at least 3 other floor neighbors)
+  for (int attempt = 0; attempt < 500; attempt++) {
+    c = GetRandomValue(1, cols - 2);
+    r = GetRandomValue(1, rows - 2);
+
+    if (data[r][c] == 0) {
+      int floorNeighbors = 0;
+      for (int yy = r - 1; yy <= r + 1; yy++) {
+        for (int xx = c - 1; xx <= c + 1; xx++) {
+          if (data[yy][xx] == 0)
+            floorNeighbors++;
+        }
+      }
+
+      if (floorNeighbors > 4) { // Needs to be in a cluster of at least 5 floor tiles (including itself)
+        isGoodSpot = true;
+        break;
+      }
     }
+  }
 
-    return data[targetY][targetX] == 0;
+  // Fallback if no ideal spot found (though with CA there usually are many)
+  if (!isGoodSpot) {
+    do {
+      c = GetRandomValue(0, cols - 1);
+      r = GetRandomValue(0, rows - 1);
+    } while (data[r][c] == 1);
+  }
+
+  return {(float)c, (float)r};
 }
 
-int Map::getCellW() const {
-    return cellW;
+void Map::spawnStairs() {
+  Vector2 pos = getRandomFloorGridPos();
+  stairsX = (int)pos.x;
+  stairsY = (int)pos.y;
 }
 
-int Map::getCellH() const {
-    return cellH;
+void Map::drawStairs() {
+  int px = stairsX * cellW;
+  int py = stairsY * cellH;
+
+  // Draw a purple square for stairs
+  DrawRectangle(px + 5, py + 5, cellW - 10, cellH - 10, PURPLE);
+  DrawText("S", px + 10, py + 10, 20, WHITE);
+}
+
+void Map::forceFloor(int x, int y) {
+  if (x >= 0 && x < cols && y >= 0 && y < rows) {
+    data[y][x] = 0;
+  }
 }
