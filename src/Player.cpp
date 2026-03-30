@@ -22,6 +22,11 @@ void Player::drawPlayer() {
   DrawCircle(pixelX, pixelY, 15, BLUE);
 }
 
+void Player::heal(int amount) {
+  health += amount;
+  if (health > maxHealth) health = maxHealth;
+}
+
 void Player::applyDamage(int amount) {
   health -= amount;
   if (health < 0) health = 0;

@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include "Map.h"
+#include "Inventory.h"
 #include <vector>
 
 class Enemy; // forward declaration — avoids circular include
@@ -20,9 +21,12 @@ private:
   int gridY;
 
 public:
+  Inventory inventory;
+
   // Constructor
   Player();
   void drawPlayer();
+  void heal(int amount);
   // Returns true if the player took an action (turn advances)
   bool movement(Map &mapData, std::vector<Enemy> &enemies);
   void spawn(Map &mapData);

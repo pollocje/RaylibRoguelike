@@ -3,15 +3,21 @@
 
 Enemy::Enemy(int x, int y, int floor)
     : gridX(x), gridY(y) {
-    attack    = 2 + floor;
-    maxHealth = 10;
-    health    = maxHealth;
+    attack      = 2 + floor;
+    maxHealth   = 10;
+    health      = maxHealth;
+    frozenTurns = 0;
+}
+
+void Enemy::applyFreeze(int turns) {
+    frozenTurns = turns;
 }
 
 void Enemy::draw() const {
     int px = gridX * 40 + 20;
     int py = gridY * 40 + 20;
-    DrawCircle(px, py, 14, RED);
+    Color bodyColor = (frozenTurns > 0) ? SKYBLUE : RED;
+    DrawCircle(px, py, 14, bodyColor);
 
     // Health bar above enemy
     int barW = 30;
@@ -39,6 +45,11 @@ bool Enemy::canMoveTo(int tx, int ty, Map &mapData, std::vector<Enemy> &enemies)
 }
 
 int Enemy::takeTurn(int playerX, int playerY, Map &mapData, std::vector<Enemy> &enemies) {
+    if (frozenTurns > 0) {
+        frozenTurns--;
+        return 0;
+    }
+
     int dx = playerX - gridX;
     int dy = playerY - gridY;
     int absDx = (dx < 0 ? -dx : dx);

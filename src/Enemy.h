@@ -11,8 +11,10 @@ public:
     int health;
     int maxHealth;
     int attack;
+    int frozenTurns;
 
     Enemy(int x, int y, int floor);
+    void applyFreeze(int turns);
 
     void draw() const;
     void takeDamage(int amount);
