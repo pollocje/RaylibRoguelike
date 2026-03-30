@@ -11,7 +11,7 @@
 const int screenWidth  = 1280;
 const int screenHeight = 720;
 
-enum GameState { MENU, PLAYING };
+enum GameState { MENU, PLAYING, GAME_OVER };
 
 // Spawn enemies only within the player's reachable region
 void spawnEnemies(std::vector<Enemy> &enemies, Map &gameMap, int floor,
@@ -52,8 +52,10 @@ int main() {
   InitWindow(screenWidth, screenHeight, "semGame");
   SetTargetFPS(60);
 
-  bool isGameStarted = false;
+  GameState gameState = MENU;
   int currentFloor = 1;
+  int deathFloor = 1;
+  float gameOverAlpha = 0.0f;
 
   MainMenu mainMenu;
 
@@ -74,10 +76,25 @@ int main() {
     float dt = GetFrameTime();
 
     // --- UPDATE ---
-    if (!isGameStarted) {
+    if (gameState == MENU) {
       MainMenu::MainMenuButtons selection = mainMenu.Update();
-      if (selection == MainMenu::START) isGameStarted = true;
+      if (selection == MainMenu::START) gameState = PLAYING;
       if (selection == MainMenu::EXIT)  break;
+    } else if (gameState == GAME_OVER) {
+      if (gameOverAlpha < 1.0f) gameOverAlpha += dt * 1.5f;
+      if (gameOverAlpha > 1.0f) gameOverAlpha = 1.0f;
+
+      if (IsKeyPressed(KEY_ENTER)) {
+        // Reset everything back to a fresh game
+        gameState   = MENU;
+        currentFloor = 1;
+        gameMap.generate();
+        player = Player();
+        player.spawn(gameMap);
+        reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
+        gameMap.spawnStairsInRegion(reachable);
+        spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
+      }
     } else {
       transition.Update(dt);
 
@@ -107,6 +124,12 @@ int main() {
               int dmg = enemies[i].takeTurn(
                 player.getGridX(), player.getGridY(), gameMap, enemies);
               player.applyDamage(dmg);
+              if (!player.isAlive()) {
+                deathFloor    = currentFloor;
+                gameState     = GAME_OVER;
+                gameOverAlpha = 0.0f;
+                break;
+              }
             }
           }
 
@@ -135,8 +158,21 @@ int main() {
     BeginDrawing();
     ClearBackground(BLACK);
 
-    if (!isGameStarted) {
+    if (gameState == MENU) {
       mainMenu.Draw();
+    } else if (gameState == GAME_OVER) {
+      DrawText("YOU DIED",
+        screenWidth / 2 - MeasureText("YOU DIED", 80) / 2,
+        screenHeight / 2 - 100, 80, Fade(RED, gameOverAlpha));
+
+      std::string reachedText = "Reached floor " + std::to_string(deathFloor);
+      DrawText(reachedText.c_str(),
+        screenWidth / 2 - MeasureText(reachedText.c_str(), 30) / 2,
+        screenHeight / 2 + 10, 30, Fade(WHITE, gameOverAlpha));
+
+      DrawText("Press ENTER to return to menu",
+        screenWidth / 2 - MeasureText("Press ENTER to return to menu", 20) / 2,
+        screenHeight / 2 + 60, 20, Fade(GRAY, gameOverAlpha));
     } else {
       gameMap.drawMap();
       gameMap.drawStairs();
