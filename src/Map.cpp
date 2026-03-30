@@ -156,10 +156,54 @@ Vector2 Map::getRandomFloorGridPos() {
   return {(float)c, (float)r};
 }
 
+// BFS flood fill — returns every floor tile the player can actually reach
+std::vector<Vector2> Map::getReachableFloorPositions(int startX, int startY) {
+  std::vector<Vector2> reachable;
+  std::vector<std::vector<bool>> visited(rows, std::vector<bool>(cols, false));
+
+  // Frontier acts as a queue; we walk it with an index to avoid erasing
+  std::vector<Vector2> frontier;
+  frontier.push_back({(float)startX, (float)startY});
+  visited[startY][startX] = true;
+
+  int dx[4] = { 0,  0, 1, -1 };
+  int dy[4] = { -1, 1, 0,  0 };
+
+  int head = 0;
+  while (head < (int)frontier.size()) {
+    Vector2 current = frontier[head++];
+    int cx = (int)current.x;
+    int cy = (int)current.y;
+    reachable.push_back(current);
+
+    for (int d = 0; d < 4; d++) {
+      int nx = cx + dx[d];
+      int ny = cy + dy[d];
+      if (nx >= 0 && nx < cols && ny >= 0 && ny < rows &&
+          !visited[ny][nx] && data[ny][nx] == 0) {
+        visited[ny][nx] = true;
+        frontier.push_back({(float)nx, (float)ny});
+      }
+    }
+  }
+
+  return reachable;
+}
+
 void Map::spawnStairs() {
   Vector2 pos = getRandomFloorGridPos();
   stairsX = (int)pos.x;
   stairsY = (int)pos.y;
+}
+
+void Map::spawnStairsInRegion(std::vector<Vector2> &reachable) {
+  if (reachable.empty()) {
+    spawnStairs(); // fallback
+    return;
+  }
+  int idx = rand() % (int)reachable.size();
+  stairsX = (int)reachable[idx].x;
+  stairsY = (int)reachable[idx].y;
 }
 
 void Map::drawStairs() {

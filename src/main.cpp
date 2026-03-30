@@ -1,98 +1,164 @@
 #include "MainMenu.h"
 #include "Map.h"
 #include "Player.h"
+#include "Enemy.h"
 #include "Transition.h"
 
 #include "raylib.h"
+#include <vector>
+#include <string>
 
-const int screenWidth = 1280;
+const int screenWidth  = 1280;
 const int screenHeight = 720;
 
-// GameState Enum
 enum GameState { MENU, PLAYING };
 
-int main() {
+// Spawn enemies only within the player's reachable region
+void spawnEnemies(std::vector<Enemy> &enemies, Map &gameMap, int floor,
+                  int playerX, int playerY, std::vector<Vector2> &reachable) {
+  enemies.clear();
+  if (reachable.empty()) return;
 
+  int count = 3 + (floor / 3); // more enemies on deeper floors
+  for (int i = 0; i < count; i++) {
+    for (int attempt = 0; attempt < 200; attempt++) {
+      int idx = rand() % (int)reachable.size();
+      int ex = (int)reachable[idx].x;
+      int ey = (int)reachable[idx].y;
+
+      // Don't spawn on the player
+      if (ex == playerX && ey == playerY) continue;
+
+      // Don't spawn on the stairs
+      if (ex == gameMap.stairsX && ey == gameMap.stairsY) continue;
+
+      // Don't spawn on another enemy
+      bool conflict = false;
+      for (int j = 0; j < (int)enemies.size(); j++) {
+        if (enemies[j].gridX == ex && enemies[j].gridY == ey) {
+          conflict = true;
+          break;
+        }
+      }
+      if (conflict) continue;
+
+      enemies.push_back(Enemy(ex, ey, floor));
+      break;
+    }
+  }
+}
+
+int main() {
   InitWindow(screenWidth, screenHeight, "semGame");
   SetTargetFPS(60);
 
-  // GameState
   bool isGameStarted = false;
+  int currentFloor = 1;
 
-  // MainMenu Init
   MainMenu mainMenu;
 
-  // Generate the Map
   Map gameMap(screenWidth, screenHeight);
-
-  // Create Player on Start
   Player player;
-
-  // Spawn Player on Map
   player.spawn(gameMap);
 
-  // Initial Stairs Spawn
-  gameMap.spawnStairs();
+  std::vector<Vector2> reachable; // reachable tiles from player spawn — rebuilt each map generate
+  reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
+  gameMap.spawnStairsInRegion(reachable);
 
-  // Transition Init
+  std::vector<Enemy> enemies;
+  spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
+
   Transition transition;
 
   while (!WindowShouldClose()) {
     float dt = GetFrameTime();
 
-    // --- 1. UPDATE PHASE (The Brain) ---
+    // --- UPDATE ---
     if (!isGameStarted) {
       MainMenu::MainMenuButtons selection = mainMenu.Update();
-      if (selection == MainMenu::START)
-        isGameStarted = true;
-      if (selection == MainMenu::EXIT)
-        break;
+      if (selection == MainMenu::START) isGameStarted = true;
+      if (selection == MainMenu::EXIT)  break;
     } else {
       transition.Update(dt);
 
       if (!transition.IsActive()) {
-        // Game-only logic
+
         if (IsKeyPressed(KEY_SPACE)) {
           gameMap.generate();
           player.spawn(gameMap);
-          gameMap.spawnStairs();
+          reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
+          gameMap.spawnStairsInRegion(reachable);
+          spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
         }
 
-        // Check for Stairs Collision
+        // Stairs collision
         if (player.getGridX() == gameMap.stairsX &&
             player.getGridY() == gameMap.stairsY) {
           transition.Start("The descent continues...");
         }
 
-        player.movement(gameMap);
-      } else {
-          // Transition is active, check if we should swap the map
-          if (transition.ShouldSwapMap()) {
-              gameMap.generate();
-              // Force the player's current spot to be a floor tile
-              gameMap.forceFloor(player.getGridX(), player.getGridY());
-              // Move stairs to a new location
-              gameMap.spawnStairs();
+        // Player takes their turn
+        bool playerActed = player.movement(gameMap, enemies);
+
+        // Enemies take their turn after the player acts
+        if (playerActed) {
+          for (int i = 0; i < (int)enemies.size(); i++) {
+            if (enemies[i].isAlive()) {
+              int dmg = enemies[i].takeTurn(
+                player.getGridX(), player.getGridY(), gameMap, enemies);
+              player.applyDamage(dmg);
+            }
           }
+
+          // Remove dead enemies
+          std::vector<Enemy> alive;
+          for (int i = 0; i < (int)enemies.size(); i++) {
+            if (enemies[i].isAlive()) alive.push_back(enemies[i]);
+          }
+          enemies = alive;
+        }
+
+      } else {
+        // Transition is active — swap the map when ready
+        if (transition.ShouldSwapMap()) {
+          currentFloor++;
+          gameMap.generate();
+          gameMap.forceFloor(player.getGridX(), player.getGridY());
+          reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
+          gameMap.spawnStairsInRegion(reachable);
+          spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
+        }
       }
     }
 
-    // --- 2. DRAW PHASE (The Eyes) ---
+    // --- DRAW ---
     BeginDrawing();
     ClearBackground(BLACK);
 
     if (!isGameStarted) {
       mainMenu.Draw();
     } else {
-      // Only draw these when the game is actually running
       gameMap.drawMap();
-      gameMap.drawStairs(); // NEW: Draw Stairs
-      player.drawPlayer();
-      DrawText("Game is Running!", 10, 10, 20, GREEN);
+      gameMap.drawStairs();
 
-      // Draw transition overlay
+      // Draw enemies
+      for (int i = 0; i < (int)enemies.size(); i++) {
+        enemies[i].draw();
+      }
+
+      player.drawPlayer();
+
+      // HUD: floor and player HP
+      std::string floorText = "Floor: " + std::to_string(currentFloor);
+      DrawText(floorText.c_str(), 10, 10, 20, WHITE);
+
+      std::string hpText = "HP: " + std::to_string(player.getHealth())
+                         + " / " + std::to_string(player.getMaxHealth());
+      DrawText(hpText.c_str(), 10, 35, 20, RED);
+
       transition.Draw();
     }
+
     EndDrawing();
   }
 

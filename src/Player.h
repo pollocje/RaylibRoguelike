@@ -2,13 +2,18 @@
 #define PLAYER_H
 
 #include "Map.h"
+#include <vector>
+
+class Enemy; // forward declaration — avoids circular include
 
 class Player {
 private:
   // Basic Stats
   int health;
+  int maxHealth;
   int mana;
   int carryWeight;
+  int attack;
 
   // coordinates
   int gridX;
@@ -18,13 +23,18 @@ public:
   // Constructor
   Player();
   void drawPlayer();
-  void movement(Map &mapData);
+  // Returns true if the player took an action (turn advances)
+  bool movement(Map &mapData, std::vector<Enemy> &enemies);
   void spawn(Map &mapData);
   void setGridPosition(int x, int y);
+  void applyDamage(int amount);
 
-  // Getter functions for coordinates
-  int getGridX() { return gridX; }
-  int getGridY() { return gridY; }
+  // Getters
+  int getGridX()    { return gridX; }
+  int getGridY()    { return gridY; }
+  int getHealth()   { return health; }
+  int getMaxHealth(){ return maxHealth; }
+  bool isAlive()    { return health > 0; }
 };
 
 #endif

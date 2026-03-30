@@ -41,9 +41,13 @@ public:
 
   Vector2 getRandomFloorGridPos();
 
+  // Returns all floor tiles reachable from (startX, startY) via flood fill
+  std::vector<Vector2> getReachableFloorPositions(int startX, int startY);
+
   // STAIRS LOGIC
   int stairsX, stairsY;
   void spawnStairs();
+  void spawnStairsInRegion(std::vector<Vector2> &reachable);
   void drawStairs();
   void forceFloor(int x, int y);
 };
