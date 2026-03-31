@@ -32,25 +32,25 @@ void Player::applyDamage(int amount) {
   if (health < 0) health = 0;
 }
 
-// Returns true if the player took an action (so enemies get their turn)
-bool Player::movement(Map &mapData, std::vector<Enemy> &enemies) {
+// Returns 0 = no action, -1 = moved/bumped wall, >0 = damage dealt to enemy
+int Player::movement(Map &mapData, std::vector<Enemy> &enemies) {
   int newX = gridX;
   int newY = gridY;
   bool keyPressed = false;
 
-  if (IsKeyPressed(KEY_UP))    { newY -= 1; keyPressed = true; }
+  if (IsKeyPressed(KEY_UP))         { newY -= 1; keyPressed = true; }
   else if (IsKeyPressed(KEY_DOWN))  { newY += 1; keyPressed = true; }
   else if (IsKeyPressed(KEY_RIGHT)) { newX += 1; keyPressed = true; }
   else if (IsKeyPressed(KEY_LEFT))  { newX -= 1; keyPressed = true; }
 
-  if (!keyPressed) return false;
+  if (!keyPressed) return 0;
 
   // Check if an enemy is on the target tile (bump attack)
   for (int i = 0; i < (int)enemies.size(); i++) {
     if (enemies[i].isAlive() && enemies[i].gridX == newX && enemies[i].gridY == newY) {
       int dmg = (rand() % attack) + 1;
       enemies[i].takeDamage(dmg);
-      return true; // turn taken (attack), player does not move
+      return dmg; // turn taken (attack), player does not move
     }
   }
 
@@ -60,7 +60,7 @@ bool Player::movement(Map &mapData, std::vector<Enemy> &enemies) {
     gridY = newY;
   }
 
-  return true;
+  return -1;
 }
 
 void Player::spawn(Map &mapData) {

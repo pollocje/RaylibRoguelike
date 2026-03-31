@@ -1,4 +1,5 @@
 #include "Transition.h"
+#include "GameFont.h"
 
 Transition::Transition() {
     state = State::IDLE;
@@ -74,11 +75,11 @@ void Transition::Draw() {
 
     // Draw text during TYPING and PAUSE
     if (state == State::TYPING || state == State::PAUSE || state == State::FADING_IN) {
-        int fontSize = 30;
-        int textWidth = MeasureText(displayedText.c_str(), fontSize);
-        DrawText(displayedText.c_str(), 
-                 GetScreenWidth() / 2 - textWidth / 2, 
-                 GetScreenHeight() / 2 - fontSize / 2, 
-                 fontSize, WHITE);
+        int fontSize = 24;
+        int textWidth = (int)MeasureTextEx(gFont, displayedText.c_str(), fontSize, 1.0f).x;
+        DrawTextEx(gFont, displayedText.c_str(),
+                 {(float)(GetScreenWidth() / 2 - textWidth / 2),
+                  (float)(GetScreenHeight() / 2 - fontSize / 2)},
+                 fontSize, 1.0f, WHITE);
     }
 }

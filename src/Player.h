@@ -27,8 +27,8 @@ public:
   Player();
   void drawPlayer();
   void heal(int amount);
-  // Returns true if the player took an action (turn advances)
-  bool movement(Map &mapData, std::vector<Enemy> &enemies);
+  // Returns 0 = no action, -1 = moved/bumped, >0 = damage dealt to enemy
+  int movement(Map &mapData, std::vector<Enemy> &enemies);
   void spawn(Map &mapData);
   void setGridPosition(int x, int y);
   void applyDamage(int amount);

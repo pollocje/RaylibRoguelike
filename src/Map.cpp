@@ -1,4 +1,5 @@
 #include "Map.h"
+#include "GameFont.h"
 #include "raylib.h"
 #include <cstdlib> // for random
 #include <ctime>   // for time
@@ -212,7 +213,7 @@ void Map::drawStairs() {
 
   // Draw a purple square for stairs
   DrawRectangle(px + 5, py + 5, cellW - 10, cellH - 10, PURPLE);
-  DrawText("S", px + 10, py + 10, 20, WHITE);
+  DrawTextEx(gFont, "S", {(float)(px + 12), (float)(py + 12)}, 16, 1.0f, WHITE);
 }
 
 void Map::forceFloor(int x, int y) {

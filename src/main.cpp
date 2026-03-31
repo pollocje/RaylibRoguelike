@@ -4,13 +4,19 @@
 #include "Enemy.h"
 #include "Transition.h"
 #include "Item.h"
+#include "CombatLog.h"
+#include "GameFont.h"
 
 #include "raylib.h"
 #include <vector>
 #include <string>
 
+Font gFont; // definition — extern declared in GameFont.h
+
 const int screenWidth  = 1280;
 const int screenHeight = 720;
+const int PANEL_WIDTH  = 280;
+const int MAP_AREA_W   = screenWidth - PANEL_WIDTH; // 1000px → 25 cols @ 40px
 
 enum GameState { MENU, PLAYING, GAME_OVER };
 
@@ -27,13 +33,9 @@ void spawnEnemies(std::vector<Enemy> &enemies, Map &gameMap, int floor,
       int ex = (int)reachable[idx].x;
       int ey = (int)reachable[idx].y;
 
-      // Don't spawn on the player
       if (ex == playerX && ey == playerY) continue;
-
-      // Don't spawn on the stairs
       if (ex == gameMap.stairsX && ey == gameMap.stairsY) continue;
 
-      // Don't spawn on another enemy
       bool conflict = false;
       for (int j = 0; j < (int)enemies.size(); j++) {
         if (enemies[j].gridX == ex && enemies[j].gridY == ey) {
@@ -82,13 +84,75 @@ void spawnItems(std::vector<FloorItem> &items, Map &gameMap,
     }
 }
 
+// Draw the right-side panel: stats, inventory, combat log
+void drawPanel(int floor, Player &player, bool isTargeting, int targetingSlot,
+               CombatLog &combatLog) {
+    int px = MAP_AREA_W; // panel left edge
+
+    // Dark background + separator
+    DrawRectangle(px, 0, PANEL_WIDTH, screenHeight, Color{18, 18, 18, 255});
+    DrawLine(px, 0, px, screenHeight, DARKGRAY);
+
+    // --- Title / Floor ---
+    DrawTextEx(gFont, "semGame", {(float)(px + 8), 10.0f}, 16, 1.0f, WHITE);
+    std::string floorText = "Floor: " + std::to_string(floor);
+    DrawTextEx(gFont, floorText.c_str(), {(float)(px + 8), 34.0f}, 12, 1.0f, GRAY);
+
+    DrawLine(px, 56, px + PANEL_WIDTH, 56, DARKGRAY);
+
+    // --- HP Bar ---
+    int hp    = player.getHealth();
+    int maxHp = player.getMaxHealth();
+    std::string hpText = "HP: " + std::to_string(hp) + " / " + std::to_string(maxHp);
+    DrawTextEx(gFont, hpText.c_str(), {(float)(px + 8), 64.0f}, 12, 1.0f, RED);
+
+    // Bar background + fill
+    int barX = px + 8;
+    int barY = 84;
+    int barW = PANEL_WIDTH - 16;
+    int barH = 10;
+    DrawRectangle(barX, barY, barW, barH, DARKGRAY);
+    int fillW = (int)((float)hp / (float)maxHp * barW);
+    if (fillW > 0)
+        DrawRectangle(barX, barY, fillW, barH, RED);
+    DrawRectangleLines(barX, barY, barW, barH, GRAY);
+
+    DrawLine(px, 104, px + PANEL_WIDTH, 104, DARKGRAY);
+
+    // --- Inventory ---
+    DrawTextEx(gFont, "Inventory", {(float)(px + 8), 110.0f}, 12, 1.0f, GRAY);
+
+    std::string hpPotText = "[H] HP Potion  x"
+        + std::to_string(player.inventory.healthPotions)
+        + "/" + std::to_string(Inventory::MAX_POTIONS);
+    DrawTextEx(gFont, hpPotText.c_str(), {(float)(px + 8), 128.0f}, 10, 1.0f, PINK);
+
+    std::string slotPrefix[3] = { "[1] ", "[2] ", "[3] " };
+    for (int i = 0; i < 3; i++) {
+        std::string slotText;
+        if (player.inventory.slots[i] == ITEM_NONE)
+            slotText = slotPrefix[i] + "---";
+        else
+            slotText = slotPrefix[i] + getItemName(player.inventory.slots[i]);
+
+        Color slotColor = (isTargeting && targetingSlot == i) ? YELLOW : WHITE;
+        DrawTextEx(gFont, slotText.c_str(), {(float)(px + 8), (float)(146 + i * 18)}, 10, 1.0f, slotColor);
+    }
+
+    DrawLine(px, 204, px + PANEL_WIDTH, 204, DARKGRAY);
+
+    // --- Combat Log ---
+    combatLog.draw(px, 210, PANEL_WIDTH);
+}
+
 int main() {
   InitWindow(screenWidth, screenHeight, "semGame");
   SetTargetFPS(60);
+  gFont = LoadFont("assets/fonts/PressStart2P.ttf");
 
   GameState gameState = MENU;
   int currentFloor = 1;
-  int deathFloor = 1;
+  int deathFloor   = 1;
   float gameOverAlpha = 0.0f;
 
   std::vector<FloorItem> floorItems;
@@ -96,13 +160,15 @@ int main() {
   int  targetingSlot = -1;
   int  targetIndex   = 0;
 
+  CombatLog combatLog;
+
   MainMenu mainMenu;
 
-  Map gameMap(screenWidth, screenHeight);
+  Map gameMap(MAP_AREA_W, screenHeight); // 25x18 — leaves room for panel
   Player player;
   player.spawn(gameMap);
 
-  std::vector<Vector2> reachable; // reachable tiles from player spawn — rebuilt each map generate
+  std::vector<Vector2> reachable;
   reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
   gameMap.spawnStairsInRegion(reachable);
 
@@ -125,10 +191,10 @@ int main() {
       if (gameOverAlpha > 1.0f) gameOverAlpha = 1.0f;
 
       if (IsKeyPressed(KEY_ENTER)) {
-        // Reset everything back to a fresh game
         gameState    = MENU;
         currentFloor = 1;
         isTargeting  = false;
+        combatLog.clear();
         gameMap.generate();
         player = Player();
         player.spawn(gameMap);
@@ -160,7 +226,6 @@ int main() {
         }
 
         if (isTargeting) {
-          // Arrow keys cycle through enemies
           if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_DOWN)) {
             targetIndex = (targetIndex + 1) % (int)enemies.size();
           }
@@ -168,21 +233,21 @@ int main() {
             targetIndex = (targetIndex - 1 + (int)enemies.size()) % (int)enemies.size();
           }
 
-          // Confirm cast with same number key that opened targeting
           int confirmKeys[3] = { KEY_ONE, KEY_TWO, KEY_THREE };
           if (IsKeyPressed(confirmKeys[targetingSlot])) {
             ItemType item = player.inventory.slots[targetingSlot];
 
             if (item == ITEM_FIREBALL_SCROLL) {
               enemies[targetIndex].takeDamage(25);
+              combatLog.add("Fireball hits for 25 damage!");
             } else if (item == ITEM_FREEZE_SCROLL) {
               enemies[targetIndex].applyFreeze(20);
+              combatLog.add("Enemy is frozen for 20 turns!");
             }
 
             player.inventory.removeSlot(targetingSlot);
             isTargeting = false;
 
-            // Remove killed enemies
             std::vector<Enemy> alive;
             for (int i = 0; i < (int)enemies.size(); i++) {
               if (enemies[i].isAlive()) alive.push_back(enemies[i]);
@@ -199,6 +264,7 @@ int main() {
           if (IsKeyPressed(KEY_H)) {
             if (player.inventory.useHealthPotion()) {
               player.heal(30);
+              combatLog.add("You drink a potion, restoring 30 HP");
             }
           }
 
@@ -213,36 +279,43 @@ int main() {
                   targetIndex   = 0;
                 }
               }
-              // instant-use items would go here (none yet)
             }
           }
 
-          // Auto-pickup: check if player is standing on a floor item
+          // Auto-pickup
           for (int i = 0; i < (int)floorItems.size(); i++) {
             if (!floorItems[i].pickedUp &&
                 floorItems[i].gridX == player.getGridX() &&
                 floorItems[i].gridY == player.getGridY()) {
               if (player.inventory.addItem(floorItems[i].type)) {
                 floorItems[i].pickedUp = true;
+                combatLog.add("Picked up " + getItemName(floorItems[i].type));
               }
             }
           }
 
-          // Player takes their turn
-          bool playerActed = player.movement(gameMap, enemies);
+          // Player turn
+          int playerResult = player.movement(gameMap, enemies);
 
-          // Enemies take their turn after the player acts
-          if (playerActed) {
+          if (playerResult != 0) {
+            if (playerResult > 0) {
+              combatLog.add("You hit for " + std::to_string(playerResult) + " damage");
+            }
+
+            // Enemies take their turn
             for (int i = 0; i < (int)enemies.size(); i++) {
               if (enemies[i].isAlive()) {
                 int dmg = enemies[i].takeTurn(
                   player.getGridX(), player.getGridY(), gameMap, enemies);
-                player.applyDamage(dmg);
-                if (!player.isAlive()) {
-                  deathFloor    = currentFloor;
-                  gameState     = GAME_OVER;
-                  gameOverAlpha = 0.0f;
-                  break;
+                if (dmg > 0) {
+                  player.applyDamage(dmg);
+                  combatLog.add("Enemy hits you for " + std::to_string(dmg));
+                  if (!player.isAlive()) {
+                    deathFloor    = currentFloor;
+                    gameState     = GAME_OVER;
+                    gameOverAlpha = 0.0f;
+                    break;
+                  }
                 }
               }
             }
@@ -257,10 +330,12 @@ int main() {
         }
 
       } else {
-        // Transition is active — swap the map when ready
+        // Transition is active — swap map when ready
         if (transition.ShouldSwapMap()) {
           currentFloor++;
           isTargeting = false;
+          combatLog.clear();
+          combatLog.add("You descend to floor " + std::to_string(currentFloor));
           gameMap.generate();
           gameMap.forceFloor(player.getGridX(), player.getGridY());
           reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
@@ -278,18 +353,23 @@ int main() {
     if (gameState == MENU) {
       mainMenu.Draw();
     } else if (gameState == GAME_OVER) {
-      DrawText("YOU DIED",
-        screenWidth / 2 - MeasureText("YOU DIED", 80) / 2,
-        screenHeight / 2 - 100, 80, Fade(RED, gameOverAlpha));
+      const char* diedStr = "YOU DIED";
+      int diedW = (int)MeasureTextEx(gFont, diedStr, 64, 1.0f).x;
+      DrawTextEx(gFont, diedStr,
+        {(float)(screenWidth / 2 - diedW / 2), (float)(screenHeight / 2 - 80)},
+        64, 1.0f, Fade(RED, gameOverAlpha));
 
       std::string reachedText = "Reached floor " + std::to_string(deathFloor);
-      DrawText(reachedText.c_str(),
-        screenWidth / 2 - MeasureText(reachedText.c_str(), 30) / 2,
-        screenHeight / 2 + 10, 30, Fade(WHITE, gameOverAlpha));
+      int reachedW = (int)MeasureTextEx(gFont, reachedText.c_str(), 20, 1.0f).x;
+      DrawTextEx(gFont, reachedText.c_str(),
+        {(float)(screenWidth / 2 - reachedW / 2), (float)(screenHeight / 2 + 10)},
+        20, 1.0f, Fade(WHITE, gameOverAlpha));
 
-      DrawText("Press ENTER to return to menu",
-        screenWidth / 2 - MeasureText("Press ENTER to return to menu", 20) / 2,
-        screenHeight / 2 + 60, 20, Fade(GRAY, gameOverAlpha));
+      const char* enterStr = "Press ENTER to return to menu";
+      int enterW = (int)MeasureTextEx(gFont, enterStr, 14, 1.0f).x;
+      DrawTextEx(gFont, enterStr,
+        {(float)(screenWidth / 2 - enterW / 2), (float)(screenHeight / 2 + 50)},
+        14, 1.0f, Fade(GRAY, gameOverAlpha));
     } else {
       gameMap.drawMap();
       gameMap.drawStairs();
@@ -314,37 +394,16 @@ int main() {
 
         std::string castItem = getItemName(player.inventory.slots[targetingSlot]);
         std::string prompt   = "Casting: " + castItem + "  |  Arrows: cycle  |  [same key]: cast  |  ESC: cancel";
-        int tw = MeasureText(prompt.c_str(), 18);
-        DrawText(prompt.c_str(), screenWidth / 2 - tw / 2, 10, 18, YELLOW);
+        int tw = (int)MeasureTextEx(gFont, prompt.c_str(), 12, 1.0f).x;
+        int promptX = MAP_AREA_W / 2 - tw / 2;
+        if (promptX < 0) promptX = 0;
+        DrawTextEx(gFont, prompt.c_str(), {(float)promptX, 10.0f}, 12, 1.0f, YELLOW);
       }
 
       player.drawPlayer();
 
-      // HUD: floor and player HP
-      std::string floorText = "Floor: " + std::to_string(currentFloor);
-      DrawText(floorText.c_str(), 10, 10, 20, WHITE);
-
-      std::string hpText = "HP: " + std::to_string(player.getHealth())
-                         + " / " + std::to_string(player.getMaxHealth());
-      DrawText(hpText.c_str(), 10, 35, 20, RED);
-
-      // HUD: inventory bar at the bottom
-      DrawText(("[H] HP Potion x" + std::to_string(player.inventory.healthPotions)
-               + "/" + std::to_string(Inventory::MAX_POTIONS)).c_str(),
-               10, screenHeight - 55, 18, PINK);
-
-      int slotLabels[3] = { KEY_ONE, KEY_TWO, KEY_THREE };
-      std::string slotPrefix[3] = { "[1] ", "[2] ", "[3] " };
-      for (int i = 0; i < 3; i++) {
-        std::string slotText;
-        if (player.inventory.slots[i] == ITEM_NONE) {
-          slotText = slotPrefix[i] + "---";
-        } else {
-          slotText = slotPrefix[i] + getItemName(player.inventory.slots[i]);
-        }
-        Color slotColor = (isTargeting && targetingSlot == i) ? YELLOW : WHITE;
-        DrawText(slotText.c_str(), 10 + i * 280, screenHeight - 30, 18, slotColor);
-      }
+      // Right-side panel
+      drawPanel(currentFloor, player, isTargeting, targetingSlot, combatLog);
 
       transition.Draw();
     }
@@ -352,6 +411,7 @@ int main() {
     EndDrawing();
   }
 
+  UnloadFont(gFont);
   CloseWindow();
   return 0;
 }
