@@ -21,7 +21,11 @@ struct Modifier {
     ModifierTier tier;
 };
 
-// Returning the decimal bonus for the modifier
+// Returns the decimal bonus for a modifier (e.g. 0.10 = +10%)
 float GetModifierValue(ModifierType type, ModifierTier tier);
+
+// Display helpers for UI
+const char* GetModifierTypeName(ModifierType type);
+const char* GetModifierTierName(ModifierTier tier);
 
 #endif

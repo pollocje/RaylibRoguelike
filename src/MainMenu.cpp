@@ -1,4 +1,5 @@
 #include "MainMenu.h"
+#include "GameFont.h"
 #include "raylib.h"
 
 MainMenu::MainMenu() { selectedButton = 1; }
@@ -43,14 +44,18 @@ void MainMenu::Draw() {
   Color exitColor = (selectedButton == 3) ? RED : WHITE;
 
   // Title
-  DrawText("Rogue!", 640, 100, 25, WHITE);
+  int titleW = (int)MeasureTextEx(gFont, "Rogue!", 32, 1.0f).x;
+  DrawTextEx(gFont, "Rogue!", {(float)(640 - titleW / 2), 100.0f}, 32, 1.0f, WHITE);
 
   // START
-  DrawText("Start", 640, 200, 20, startColor);
+  int startW = (int)MeasureTextEx(gFont, "Start", 20, 1.0f).x;
+  DrawTextEx(gFont, "Start", {(float)(640 - startW / 2), 200.0f}, 20, 1.0f, startColor);
 
   // OPTIONS
-  DrawText("Options", 640, 300, 20, optColor);
+  int optW = (int)MeasureTextEx(gFont, "Options", 20, 1.0f).x;
+  DrawTextEx(gFont, "Options", {(float)(640 - optW / 2), 270.0f}, 20, 1.0f, optColor);
 
   // EXIT
-  DrawText("Exit", 640, 400, 20, exitColor);
+  int exitW = (int)MeasureTextEx(gFont, "Exit", 20, 1.0f).x;
+  DrawTextEx(gFont, "Exit", {(float)(640 - exitW / 2), 340.0f}, 20, 1.0f, exitColor);
 }
