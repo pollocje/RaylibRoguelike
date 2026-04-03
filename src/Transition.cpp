@@ -6,8 +6,8 @@ Transition::Transition() {
     alpha = 0.0f;
     letterCount = 0;
     timer = 0.0f;
-    typeSpeed = 0.1f;
-    pauseDuration = 2.0f;
+    typeSpeed = 0.04f;
+    pauseDuration = 1.0f;
     mapSwapped = false;
 }
 
@@ -24,7 +24,7 @@ void Transition::Start(std::string text) {
 void Transition::Update(float dt) {
     switch (state) {
         case State::FADING_OUT:
-            alpha += dt * 1.5f; // Adjust speed as needed
+            alpha += dt * 2.5f; // Adjust speed as needed
             if (alpha >= 1.0f) {
                 alpha = 1.0f;
                 state = State::TYPING;
@@ -55,7 +55,7 @@ void Transition::Update(float dt) {
             break;
 
         case State::FADING_IN:
-            alpha -= dt * 1.5f;
+            alpha -= dt * 2.5f;
             if (alpha <= 0.0f) {
                 alpha = 0.0f;
                 state = State::IDLE;

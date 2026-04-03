@@ -47,7 +47,7 @@ public:
   // STAIRS LOGIC
   int stairsX, stairsY;
   void spawnStairs();
-  void spawnStairsInRegion(std::vector<Vector2> &reachable);
+  void spawnStairsInRegion(std::vector<Vector2> &reachable, int playerX, int playerY);
   void drawStairs();
   void forceFloor(int x, int y);
 };

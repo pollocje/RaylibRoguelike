@@ -41,10 +41,10 @@ void Player::RecalculateStats() {
         float value = GetModifierValue(mod.type, mod.tier);
         switch (mod.type) {
         case ModifierType::Speed:
-            speed += baseSpeed * value;
+            speed += value;
             break;
         case ModifierType::Health:
-            maxHealth += (int)(baseHealth * value);
+            maxHealth += (int)value;
             break;
         case ModifierType::Luck:
             luckChance += value;

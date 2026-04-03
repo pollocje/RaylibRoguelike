@@ -4,17 +4,17 @@ float GetModifierValue(ModifierType type, ModifierTier tier) {
     switch (type) {
     case ModifierType::Speed:
         switch (tier) {
-        case ModifierTier::Tier1: return 0.10f;
-        case ModifierTier::Tier2: return 0.20f;
-        case ModifierTier::Tier3: return 0.30f;
+        case ModifierTier::Tier1: return 0.5f;
+        case ModifierTier::Tier2: return 1.0f;
+        case ModifierTier::Tier3: return 1.5f;
         }
         break;
 
     case ModifierType::Health:
         switch (tier) {
-        case ModifierTier::Tier1: return 0.50f;
-        case ModifierTier::Tier2: return 1.00f;
-        case ModifierTier::Tier3: return 1.50f;
+        case ModifierTier::Tier1: return 25.0f;
+        case ModifierTier::Tier2: return 50.0f;
+        case ModifierTier::Tier3: return 75.0f;
         }
         break;
 

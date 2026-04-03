@@ -197,14 +197,26 @@ void Map::spawnStairs() {
   stairsY = (int)pos.y;
 }
 
-void Map::spawnStairsInRegion(std::vector<Vector2> &reachable) {
+void Map::spawnStairsInRegion(std::vector<Vector2> &reachable, int playerX, int playerY) {
   if (reachable.empty()) {
     spawnStairs(); // fallback
     return;
   }
-  int idx = rand() % (int)reachable.size();
-  stairsX = (int)reachable[idx].x;
-  stairsY = (int)reachable[idx].y;
+
+  const int MIN_DIST = 8;
+  std::vector<Vector2> farTiles;
+  for (const Vector2& pos : reachable) {
+    int dx = (int)pos.x - playerX;
+    int dy = (int)pos.y - playerY;
+    if (dx * dx + dy * dy >= MIN_DIST * MIN_DIST)
+      farTiles.push_back(pos);
+  }
+
+  // Fall back to full reachable list if no tile is far enough
+  std::vector<Vector2>& candidates = farTiles.empty() ? reachable : farTiles;
+  int idx = rand() % (int)candidates.size();
+  stairsX = (int)candidates[idx].x;
+  stairsY = (int)candidates[idx].y;
 }
 
 void Map::drawStairs() {

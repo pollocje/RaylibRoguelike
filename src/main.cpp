@@ -221,7 +221,7 @@ int main() {
 
   std::vector<Vector2> reachable;
   reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
-  gameMap.spawnStairsInRegion(reachable);
+  gameMap.spawnStairsInRegion(reachable, player.getGridX(), player.getGridY());
 
   std::vector<Enemy> enemies;
   spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
@@ -264,7 +264,7 @@ int main() {
         player = Player();
         player.spawn(gameMap);
         reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
-        gameMap.spawnStairsInRegion(reachable);
+        gameMap.spawnStairsInRegion(reachable, player.getGridX(), player.getGridY());
         spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
         spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
         gameState = CHARACTER_SELECT;
@@ -283,7 +283,7 @@ int main() {
           gameMap.generate();
           player.spawn(gameMap);
           reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
-          gameMap.spawnStairsInRegion(reachable);
+          gameMap.spawnStairsInRegion(reachable, player.getGridX(), player.getGridY());
           spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
           spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
           isTargeting = false;
@@ -439,7 +439,7 @@ int main() {
           gameMap.generate();
           gameMap.forceFloor(player.getGridX(), player.getGridY());
           reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
-          gameMap.spawnStairsInRegion(reachable);
+          gameMap.spawnStairsInRegion(reachable, player.getGridX(), player.getGridY());
           spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
           spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
           offeredModifiers      = generateModifierOffers();
@@ -461,22 +461,6 @@ int main() {
         gameState = PLAYING;
       }
     }
-    // Testing buff functionality
-    if (IsKeyPressed(KEY_ONE)) {
-        player.ApplyModifier({ ModifierType::Speed, ModifierTier::Tier1 });
-        player.PrintStats();
-    }
-
-    if (IsKeyPressed(KEY_TWO)) {
-        player.ApplyModifier({ ModifierType::Health, ModifierTier::Tier2 });
-        player.PrintStats();
-    }
-
-    if (IsKeyPressed(KEY_THREE)) {
-        player.ApplyModifier({ ModifierType::Luck, ModifierTier::Tier1 });
-        player.PrintStats();
-    }
-
     // --- 2. DRAW PHASE (The Eyes) ---
     BeginDrawing();
     ClearBackground(BLACK);
@@ -630,9 +614,15 @@ int main() {
         DrawTextEx(gFont, tierName,
           {(float)(cx + cardW / 2 - tierW / 2), (float)(cardY + 70)}, 12, 1.0f, GRAY);
 
-        // Show percentage bonus
+        // Show bonus value
         float val = GetModifierValue(offeredModifiers[i].type, offeredModifiers[i].tier);
-        std::string bonusStr = "+" + std::to_string((int)(val * 100)) + "%";
+        std::string bonusStr;
+        if (offeredModifiers[i].type == ModifierType::Speed)
+            bonusStr = "+" + std::to_string(val).substr(0, std::to_string(val).find('.') + 2) + " spd";
+        else if (offeredModifiers[i].type == ModifierType::Health)
+            bonusStr = "+" + std::to_string((int)val) + " HP";
+        else
+            bonusStr = "+" + std::to_string((int)(val * 100)) + "%";
         int bonusW = (int)MeasureTextEx(gFont, bonusStr.c_str(), 14, 1.0f).x;
         DrawTextEx(gFont, bonusStr.c_str(),
           {(float)(cx + cardW / 2 - bonusW / 2), (float)(cardY + 100)}, 14, 1.0f, GREEN);
