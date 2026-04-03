@@ -17,6 +17,9 @@ Player::Player() {
 
     attack               = 10;
     rageTurnsRemaining   = 0;
+    isMage               = false;
+    classColor           = BLUE;
+    classShape           = 0;
     xp                   = 0;
     reputation = 0;
     level      = 0;
@@ -73,9 +76,10 @@ void Player::IncrementLevel() {
 }
 
 void Player::drawPlayer() {
-    int pixelX = (gridX * 40) + 20;
-    int pixelY = (gridY * 40) + 20;
-    DrawCircle(pixelX, pixelY, 15, BLUE);
+    int px = gridX * 40 + 20;
+    int py = gridY * 40 + 20;
+    int half = 12;
+    DrawRectangle(px - half, py - half, half * 2, half * 2, classColor);
 }
 
 void Player::DrawHUD() const {
@@ -125,6 +129,31 @@ int Player::movement(Map& mapData, std::vector<Enemy>& enemies) {
 
 void Player::ApplyRage(int turns) {
     rageTurnsRemaining += turns;
+}
+
+void Player::ApplyCharacterClass(float hpMult, float atkMult, float dodgeMult, float spdMult, bool mage) {
+    const float refDodge = 0.10f;
+
+    baseHealth      = (int)(baseHealth * hpMult);
+    attack          = (int)(attack     * atkMult);
+    baseDodgeChance = refDodge * dodgeMult;
+    baseSpeed       = baseSpeed * spdMult;
+    isMage          = mage;
+
+    // Set class visuals
+    if (!mage && atkMult == 1.0f) {           // Warrior
+        classColor = Color{180,  60,  60, 255};
+        classShape = 0;
+    } else if (!mage && atkMult > 1.0f) {     // Rogue
+        classColor = Color{ 60, 180,  90, 255};
+        classShape = 1;
+    } else {                                   // Mage
+        classColor = Color{ 80,  80, 200, 255};
+        classShape = 2;
+    }
+
+    currentHealth = baseHealth;
+    RecalculateStats();
 }
 
 void Player::spawn(Map& mapData) {

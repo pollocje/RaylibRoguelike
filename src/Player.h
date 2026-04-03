@@ -33,6 +33,11 @@ private:
     // Combat
     int attack;
     int rageTurnsRemaining;
+    bool isMage;
+
+    // Visual
+    Color classColor;
+    int   classShape; // 0 = circle (Warrior), 1 = triangle (Rogue), 2 = diamond (Mage)
 
     // Progression
     int xp;
@@ -59,6 +64,7 @@ public:
 
     // Modifier methods
     void ApplyModifier(const Modifier& modifier);
+    void ApplyCharacterClass(float hpMult, float atkMult, float dodgeMult, float spdMult, bool mage);
     void ResetStatsToBase();
     void IncrementLevel();
 
@@ -69,6 +75,7 @@ public:
     void Heal(int amount);          // alias for heal
     void ApplyRage(int turns);     // rage lasts for N total turns
     bool IsRaging() const { return rageTurnsRemaining > 0; }
+    bool IsMage()   const { return isMage; }
     int  GetRageTurnsRemaining() const { return rageTurnsRemaining; }
     void GainXP(int baseXP);
     int GetDamageOutput(int baseDamage) const;
@@ -88,7 +95,10 @@ public:
     int GetCurrentHealth() const { return currentHealth; }
     int GetMaxHealth() const     { return maxHealth; }
     float GetSpeed() const;
-    float GetSpeedBonusChance() const; // 0.0 at base, +0.1 per Tier1 of Speed modifier
+    float GetSpeedBonusChance() const;
+    float GetDodgeChance() const     { return dodgeChance; }
+    float GetLuckChance() const      { return luckChance; }
+    float GetXPGainMultiplier() const { return xpGainMultiplier; }
     int GetXP() const;
     int GetReputation() const;
     int GetLevel() const { return level; }

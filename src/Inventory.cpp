@@ -2,7 +2,8 @@
 
 Inventory::Inventory() {
     for (int i = 0; i < GENERAL_SLOTS; i++) {
-        slots[i] = ITEM_NONE;
+        slots[i]       = ITEM_NONE;
+        slotCharges[i] = 1;
     }
     healthPotions = 0;
 }
@@ -17,7 +18,7 @@ bool Inventory::hasRoom(ItemType type) const {
     return false;
 }
 
-bool Inventory::addItem(ItemType type) {
+bool Inventory::addItem(ItemType type, int charges) {
     if (!hasRoom(type)) return false;
     if (type == ITEM_HEALTH_POTION) {
         healthPotions++;
@@ -25,7 +26,8 @@ bool Inventory::addItem(ItemType type) {
     }
     for (int i = 0; i < GENERAL_SLOTS; i++) {
         if (slots[i] == ITEM_NONE) {
-            slots[i] = type;
+            slots[i]       = type;
+            slotCharges[i] = charges;
             return true;
         }
     }
@@ -34,7 +36,11 @@ bool Inventory::addItem(ItemType type) {
 
 void Inventory::removeSlot(int index) {
     if (index >= 0 && index < GENERAL_SLOTS) {
-        slots[index] = ITEM_NONE;
+        slotCharges[index]--;
+        if (slotCharges[index] <= 0) {
+            slots[index]       = ITEM_NONE;
+            slotCharges[index] = 1;
+        }
     }
 }
 

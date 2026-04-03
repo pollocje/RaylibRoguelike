@@ -20,7 +20,7 @@ const int screenHeight = 720;
 const int PANEL_WIDTH  = 280;
 const int MAP_AREA_W   = screenWidth - PANEL_WIDTH; // 1000px → 25 cols @ 40px
 
-enum GameState { MENU, PLAYING, MODIFIER_SELECT, GAME_OVER };
+enum GameState { MENU, CHARACTER_SELECT, PLAYING, MODIFIER_SELECT, GAME_OVER };
 
 std::vector<Modifier> generateModifierOffers() {
     ModifierType allTypes[] = {
@@ -166,6 +166,29 @@ void drawPanel(int floor, Player &player, bool isTargeting, int targetingSlot,
 
     // --- Combat Log ---
     combatLog.draw(px, 210, PANEL_WIDTH);
+
+    // --- Stats ---
+    // Combat log: 18px header + 12 * 16px messages = 210px → bottom at 420
+    int statsY = 428;
+    DrawLine(px, statsY - 4, px + PANEL_WIDTH, statsY - 4, DARKGRAY);
+    DrawTextEx(gFont, "Stats", {(float)(px + 8), (float)statsY}, 12, 1.0f, GRAY);
+    statsY += 18;
+
+    auto drawStat = [&](const char* label, float value, const char* suffix, Color col) {
+        std::string text = std::string(label) + std::to_string((int)(value)) + suffix;
+        DrawTextEx(gFont, text.c_str(), {(float)(px + 8), (float)statsY}, 10, 1.0f, col);
+        statsY += 16;
+    };
+
+    drawStat("Speed Bonus:  +", player.GetSpeedBonusChance() * 100.0f, "%", SKYBLUE);
+    drawStat("Dodge:         ", player.GetDodgeChance()      * 100.0f, "%", GREEN);
+    drawStat("Luck:          ", player.GetLuckChance()        * 100.0f, "%", GOLD);
+    drawStat("XP Gain:      +", (player.GetXPGainMultiplier() - 1.0f) * 100.0f, "%", YELLOW);
+
+    if (player.IsRaging()) {
+        std::string rageText = "Rage:          " + std::to_string(player.GetRageTurnsRemaining()) + " turns";
+        DrawTextEx(gFont, rageText.c_str(), {(float)(px + 8), (float)statsY}, 10, 1.0f, ORANGE);
+    }
 }
 
 int main() {
@@ -179,6 +202,7 @@ int main() {
   float gameOverAlpha = 0.0f;
 
   std::vector<FloorItem> floorItems;
+  int  characterSelectIndex  = 0;
   std::vector<Modifier> offeredModifiers;
   int  modifierSelectIndex   = 0;
   bool pendingModifierSelect = false;
@@ -211,16 +235,30 @@ int main() {
     // --- UPDATE ---
     if (gameState == MENU) {
       MainMenu::MainMenuButtons selection = mainMenu.Update();
-      if (selection == MainMenu::START) gameState = PLAYING;
+      if (selection == MainMenu::START) { characterSelectIndex = 0; gameState = CHARACTER_SELECT; }
       if (selection == MainMenu::EXIT)  break;
+    } else if (gameState == CHARACTER_SELECT) {
+      if (IsKeyPressed(KEY_LEFT)  || IsKeyPressed(KEY_A))
+        characterSelectIndex = (characterSelectIndex - 1 + 3) % 3;
+      if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D))
+        characterSelectIndex = (characterSelectIndex + 1) % 3;
+      if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+        // Apply chosen class stats to player
+        // hpMult, atkMult, dodgeMult, spdMult, isMage
+        if      (characterSelectIndex == 0) player.ApplyCharacterClass(2.0f, 1.0f,  1.25f, 1.0f,  false); // Warrior
+        else if (characterSelectIndex == 1) player.ApplyCharacterClass(1.0f, 1.5f,  2.0f,  1.5f,  false); // Rogue
+        else                                player.ApplyCharacterClass(0.5f, 0.75f, 1.0f,  1.0f,  true);  // Mage
+        gameState = PLAYING;
+      }
     } else if (gameState == GAME_OVER) {
       if (gameOverAlpha < 1.0f) gameOverAlpha += dt * 1.5f;
       if (gameOverAlpha > 1.0f) gameOverAlpha = 1.0f;
 
       if (IsKeyPressed(KEY_ENTER)) {
-        gameState    = MENU;
         currentFloor = 1;
         isTargeting  = false;
+        pendingPlayerActions  = 1;
+        characterSelectIndex  = 0;
         combatLog.clear();
         gameMap.generate();
         player = Player();
@@ -229,7 +267,7 @@ int main() {
         gameMap.spawnStairsInRegion(reachable);
         spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
         spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
-        pendingPlayerActions = 1;
+        gameState = CHARACTER_SELECT;
       }
     } else if (gameState == PLAYING) {
       transition.Update(dt);
@@ -329,7 +367,11 @@ int main() {
             if (!floorItems[i].pickedUp &&
                 floorItems[i].gridX == player.getGridX() &&
                 floorItems[i].gridY == player.getGridY()) {
-              if (player.inventory.addItem(floorItems[i].type)) {
+              bool isScroll = floorItems[i].type == ITEM_FIREBALL_SCROLL ||
+                              floorItems[i].type == ITEM_FREEZE_SCROLL   ||
+                              floorItems[i].type == ITEM_TELEPORT_SCROLL;
+              int charges = (player.IsMage() && isScroll) ? 2 : 1;
+              if (player.inventory.addItem(floorItems[i].type, charges)) {
                 floorItems[i].pickedUp = true;
                 combatLog.add("Picked up " + getItemName(floorItems[i].type));
               }
@@ -441,6 +483,64 @@ int main() {
 
     if (gameState == MENU) {
       mainMenu.Draw();
+    } else if (gameState == CHARACTER_SELECT) {
+      const char* title = "Choose Your Hero";
+      int titleW = (int)MeasureTextEx(gFont, title, 24, 1.0f).x;
+      DrawTextEx(gFont, title, {(float)(screenWidth / 2 - titleW / 2), 100.0f}, 24, 1.0f, WHITE);
+
+      struct HeroCard { const char* name; const char* subtitle; Color color; };
+      HeroCard heroes[3] = {
+        { "Warrior", "More Health",              Color{180,  60,  60, 255} },
+        { "Rogue",   "Quick in Battle",          Color{ 60, 180,  90, 255} },
+        { "Mage",    "Weak, but uses Scrolls\nTwice", Color{ 80,  80, 200, 255} },
+      };
+
+      int cardW = 240, cardH = 200;
+      int totalW = cardW * 3 + 40 * 2;
+      int startX = screenWidth / 2 - totalW / 2;
+      int cardY  = screenHeight / 2 - cardH / 2;
+
+      for (int i = 0; i < 3; i++) {
+        int cx = startX + i * (cardW + 40);
+        bool sel = (i == characterSelectIndex);
+        Color border = sel ? YELLOW : DARKGRAY;
+        Color bg     = sel ? Color{30, 30, 50, 255} : Color{15, 15, 25, 255};
+
+        DrawRectangle(cx, cardY, cardW, cardH, bg);
+        DrawRectangleLines(cx, cardY, cardW, cardH, border);
+
+        // Class colour swatch
+        DrawRectangle(cx + cardW / 2 - 20, cardY + 20, 40, 40, heroes[i].color);
+
+        // Name
+        int nameW = (int)MeasureTextEx(gFont, heroes[i].name, 16, 1.0f).x;
+        DrawTextEx(gFont, heroes[i].name,
+          {(float)(cx + cardW / 2 - nameW / 2), (float)(cardY + 75)}, 16, 1.0f,
+          sel ? YELLOW : WHITE);
+
+        // Subtitle — handle manual newline
+        std::string sub = heroes[i].subtitle;
+        int nl = (int)sub.find('\n');
+        if (nl == (int)std::string::npos) {
+          int subW = (int)MeasureTextEx(gFont, sub.c_str(), 10, 1.0f).x;
+          DrawTextEx(gFont, sub.c_str(),
+            {(float)(cx + cardW / 2 - subW / 2), (float)(cardY + 110)}, 10, 1.0f, LIGHTGRAY);
+        } else {
+          std::string line1 = sub.substr(0, nl);
+          std::string line2 = sub.substr(nl + 1);
+          int w1 = (int)MeasureTextEx(gFont, line1.c_str(), 10, 1.0f).x;
+          int w2 = (int)MeasureTextEx(gFont, line2.c_str(), 10, 1.0f).x;
+          DrawTextEx(gFont, line1.c_str(),
+            {(float)(cx + cardW / 2 - w1 / 2), (float)(cardY + 110)}, 10, 1.0f, LIGHTGRAY);
+          DrawTextEx(gFont, line2.c_str(),
+            {(float)(cx + cardW / 2 - w2 / 2), (float)(cardY + 128)}, 10, 1.0f, LIGHTGRAY);
+        }
+      }
+
+      const char* hint = "Left/Right to select   Enter to confirm";
+      int hintW = (int)MeasureTextEx(gFont, hint, 10, 1.0f).x;
+      DrawTextEx(gFont, hint,
+        {(float)(screenWidth / 2 - hintW / 2), (float)(cardY + cardH + 30)}, 10, 1.0f, GRAY);
     } else if (gameState == GAME_OVER) {
       const char* diedStr = "YOU DIED";
       int diedW = (int)MeasureTextEx(gFont, diedStr, 64, 1.0f).x;
