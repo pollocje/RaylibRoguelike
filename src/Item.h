@@ -8,7 +8,9 @@ enum ItemType {
     ITEM_NONE,
     ITEM_HEALTH_POTION,
     ITEM_FIREBALL_SCROLL,
-    ITEM_FREEZE_SCROLL
+    ITEM_FREEZE_SCROLL,
+    ITEM_TELEPORT_SCROLL,
+    ITEM_RAGE_POTION
 };
 
 std::string getItemName(ItemType type);

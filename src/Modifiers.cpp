@@ -18,14 +18,6 @@ float GetModifierValue(ModifierType type, ModifierTier tier) {
         }
         break;
 
-    case ModifierType::FireRate:
-        switch (tier) {
-        case ModifierTier::Tier1: return 0.10f;
-        case ModifierTier::Tier2: return 0.20f;
-        case ModifierTier::Tier3: return 0.30f;
-        }
-        break;
-
     case ModifierType::Luck:
         switch (tier) {
         case ModifierTier::Tier1: return 0.05f;
@@ -58,7 +50,6 @@ const char* GetModifierTypeName(ModifierType type) {
     switch (type) {
     case ModifierType::Speed:    return "Speed";
     case ModifierType::Health:   return "Health";
-    case ModifierType::FireRate: return "Fire Rate";
     case ModifierType::Luck:     return "Luck";
     case ModifierType::Dodge:    return "Dodge";
     case ModifierType::XPGain:   return "XP Gain";

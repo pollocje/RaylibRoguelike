@@ -4,7 +4,6 @@
 enum class ModifierType {
     Speed,
     Health,
-    FireRate,
     Luck,
     Dodge,
     XPGain

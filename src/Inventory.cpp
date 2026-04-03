@@ -48,4 +48,5 @@ bool Inventory::requiresTargeting(int slot) const {
     if (slot < 0 || slot >= GENERAL_SLOTS) return false;
     ItemType t = slots[slot];
     return t == ITEM_FIREBALL_SCROLL || t == ITEM_FREEZE_SCROLL;
+    // ITEM_TELEPORT_SCROLL is instant-use — no targeting needed
 }

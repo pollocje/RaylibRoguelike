@@ -4,8 +4,10 @@ std::string getItemName(ItemType type) {
     switch (type) {
         case ITEM_HEALTH_POTION:   return "Health Potion";
         case ITEM_FIREBALL_SCROLL: return "Fireball Scroll";
-        case ITEM_FREEZE_SCROLL:   return "Freeze Scroll";
-        default:                   return "Unknown";
+        case ITEM_FREEZE_SCROLL:    return "Freeze Scroll";
+        case ITEM_TELEPORT_SCROLL:  return "Teleport Scroll";
+        case ITEM_RAGE_POTION:      return "Rage Potion";
+        default:                    return "Unknown";
     }
 }
 
@@ -13,8 +15,10 @@ Color getItemColor(ItemType type) {
     switch (type) {
         case ITEM_HEALTH_POTION:   return RED;
         case ITEM_FIREBALL_SCROLL: return ORANGE;
-        case ITEM_FREEZE_SCROLL:   return SKYBLUE;
-        default:                   return WHITE;
+        case ITEM_FREEZE_SCROLL:    return SKYBLUE;
+        case ITEM_TELEPORT_SCROLL:  return PURPLE;
+        case ITEM_RAGE_POTION:      return Color{200, 50, 0, 255};
+        default:                    return WHITE;
     }
 }
 
@@ -43,6 +47,18 @@ void drawFloorItem(ItemType type, int gridX, int gridY) {
             DrawPoly(center, 4, 10, 45.0f, col);
             break;
         }
+
+        case ITEM_TELEPORT_SCROLL: {
+            Vector2 center = { (float)cx, (float)cy };
+            DrawPoly(center, 5, 10, 0.0f, col);
+            break;
+        }
+
+        case ITEM_RAGE_POTION:
+            // Filled circle with a smaller dark ring — flask silhouette
+            DrawCircle(cx, cy, 8, col);
+            DrawCircleLines(cx, cy, 8, Color{120, 30, 0, 255});
+            break;
 
         default:
             DrawCircle(cx, cy, 6, WHITE);
