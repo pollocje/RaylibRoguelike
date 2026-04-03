@@ -11,6 +11,7 @@
 #include "raylib.h"
 #include <vector>
 #include <string>
+#include <cstdlib>
 
 Font gFont; // definition — extern declared in GameFont.h
 
@@ -19,7 +20,28 @@ const int screenHeight = 720;
 const int PANEL_WIDTH  = 280;
 const int MAP_AREA_W   = screenWidth - PANEL_WIDTH; // 1000px → 25 cols @ 40px
 
-enum GameState { MENU, PLAYING, GAME_OVER };
+enum GameState { MENU, PLAYING, MODIFIER_SELECT, GAME_OVER };
+
+std::vector<Modifier> generateModifierOffers() {
+    ModifierType allTypes[] = {
+        ModifierType::Speed, ModifierType::Health, ModifierType::FireRate,
+        ModifierType::Luck,  ModifierType::Dodge,  ModifierType::XPGain
+    };
+    // Shuffle types via Fisher-Yates
+    for (int i = 5; i > 0; i--) {
+        int j = rand() % (i + 1);
+        ModifierType tmp = allTypes[i]; allTypes[i] = allTypes[j]; allTypes[j] = tmp;
+    }
+    std::vector<Modifier> offers;
+    for (int i = 0; i < 3; i++) {
+        int tierRoll = rand() % 3;
+        ModifierTier tier = (tierRoll == 0) ? ModifierTier::Tier1
+                          : (tierRoll == 1) ? ModifierTier::Tier2
+                                            : ModifierTier::Tier3;
+        offers.push_back({ allTypes[i], tier });
+    }
+    return offers;
+}
 
 // Spawn enemies only within the player's reachable region
 void spawnEnemies(std::vector<Enemy> &enemies, Map &gameMap, int floor,
@@ -157,6 +179,9 @@ int main() {
   float gameOverAlpha = 0.0f;
 
   std::vector<FloorItem> floorItems;
+  std::vector<Modifier> offeredModifiers;
+  int  modifierSelectIndex  = 0;
+  bool pendingModifierSelect = false;
   bool isTargeting   = false;
   int  targetingSlot = -1;
   int  targetIndex   = 0;
@@ -204,10 +229,15 @@ int main() {
         spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
         spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
       }
-    } else {
+    } else if (gameState == PLAYING) {
       transition.Update(dt);
 
       if (!transition.IsActive()) {
+
+        if (pendingModifierSelect) {
+          pendingModifierSelect = false;
+          gameState = MODIFIER_SELECT;
+        } else {
 
         if (IsKeyPressed(KEY_SPACE)) {
           gameMap.generate();
@@ -330,6 +360,8 @@ int main() {
           }
         }
 
+        } // end else (not pendingModifierSelect)
+
       } else {
         // Transition is active — swap map when ready
         if (transition.ShouldSwapMap()) {
@@ -343,7 +375,22 @@ int main() {
           gameMap.spawnStairsInRegion(reachable);
           spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
           spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
+          offeredModifiers      = generateModifierOffers();
+          modifierSelectIndex   = 0;
+          pendingModifierSelect = true;
         }
+      }
+    } else if (gameState == MODIFIER_SELECT) {
+      if (IsKeyPressed(KEY_LEFT)  || IsKeyPressed(KEY_A))
+        modifierSelectIndex = (modifierSelectIndex - 1 + 3) % 3;
+      if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D))
+        modifierSelectIndex = (modifierSelectIndex + 1) % 3;
+      if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+        player.ApplyModifier(offeredModifiers[modifierSelectIndex]);
+        combatLog.add(std::string("Gained: ") +
+                      GetModifierTypeName(offeredModifiers[modifierSelectIndex].type) +
+                      " " + GetModifierTierName(offeredModifiers[modifierSelectIndex].tier));
+        gameState = PLAYING;
       }
     }
     // Testing buff functionality
@@ -391,7 +438,7 @@ int main() {
       DrawTextEx(gFont, enterStr,
         {(float)(screenWidth / 2 - enterW / 2), (float)(screenHeight / 2 + 50)},
         14, 1.0f, Fade(GRAY, gameOverAlpha));
-    } else {
+    } else if (gameState == PLAYING) {
       gameMap.drawMap();
       gameMap.drawStairs();
 
@@ -427,6 +474,53 @@ int main() {
       drawPanel(currentFloor, player, isTargeting, targetingSlot, combatLog);
 
       transition.Draw();
+    } else if (gameState == MODIFIER_SELECT) {
+      // Dim background
+      DrawRectangle(0, 0, screenWidth, screenHeight, Color{0, 0, 0, 200});
+
+      const char* title = "Choose a Modifier";
+      int titleW = (int)MeasureTextEx(gFont, title, 24, 1.0f).x;
+      DrawTextEx(gFont, title, {(float)(screenWidth / 2 - titleW / 2), 120.0f}, 24, 1.0f, WHITE);
+
+      // Draw 3 cards
+      int cardW = 220, cardH = 160;
+      int totalW = cardW * 3 + 40 * 2; // cards + gaps
+      int startX = screenWidth / 2 - totalW / 2;
+      int cardY  = screenHeight / 2 - cardH / 2;
+
+      for (int i = 0; i < 3; i++) {
+        int cx = startX + i * (cardW + 40);
+        bool selected = (i == modifierSelectIndex);
+        Color border = selected ? YELLOW : DARKGRAY;
+        Color bg     = selected ? Color{40, 40, 60, 255} : Color{20, 20, 30, 255};
+
+        DrawRectangle(cx, cardY, cardW, cardH, bg);
+        DrawRectangleLines(cx, cardY, cardW, cardH, border);
+
+        const char* typeName = GetModifierTypeName(offeredModifiers[i].type);
+        const char* tierName = GetModifierTierName(offeredModifiers[i].tier);
+
+        int typeW = (int)MeasureTextEx(gFont, typeName, 16, 1.0f).x;
+        DrawTextEx(gFont, typeName,
+          {(float)(cx + cardW / 2 - typeW / 2), (float)(cardY + 30)}, 16, 1.0f,
+          selected ? YELLOW : WHITE);
+
+        int tierW = (int)MeasureTextEx(gFont, tierName, 12, 1.0f).x;
+        DrawTextEx(gFont, tierName,
+          {(float)(cx + cardW / 2 - tierW / 2), (float)(cardY + 70)}, 12, 1.0f, GRAY);
+
+        // Show percentage bonus
+        float val = GetModifierValue(offeredModifiers[i].type, offeredModifiers[i].tier);
+        std::string bonusStr = "+" + std::to_string((int)(val * 100)) + "%";
+        int bonusW = (int)MeasureTextEx(gFont, bonusStr.c_str(), 14, 1.0f).x;
+        DrawTextEx(gFont, bonusStr.c_str(),
+          {(float)(cx + cardW / 2 - bonusW / 2), (float)(cardY + 100)}, 14, 1.0f, GREEN);
+      }
+
+      const char* hint = "Left/Right to select   Enter to confirm";
+      int hintW = (int)MeasureTextEx(gFont, hint, 10, 1.0f).x;
+      DrawTextEx(gFont, hint,
+        {(float)(screenWidth / 2 - hintW / 2), (float)(cardY + cardH + 30)}, 10, 1.0f, GRAY);
     }
 
     EndDrawing();
