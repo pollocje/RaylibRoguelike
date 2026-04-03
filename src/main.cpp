@@ -24,11 +24,11 @@ enum GameState { MENU, PLAYING, MODIFIER_SELECT, GAME_OVER };
 
 std::vector<Modifier> generateModifierOffers() {
     ModifierType allTypes[] = {
-        ModifierType::Speed, ModifierType::Health, ModifierType::FireRate,
+        ModifierType::Speed, ModifierType::Health,
         ModifierType::Luck,  ModifierType::Dodge,  ModifierType::XPGain
     };
     // Shuffle types via Fisher-Yates
-    for (int i = 5; i > 0; i--) {
+    for (int i = 4; i > 0; i--) {
         int j = rand() % (i + 1);
         ModifierType tmp = allTypes[i]; allTypes[i] = allTypes[j]; allTypes[j] = tmp;
     }
@@ -79,7 +79,7 @@ void spawnItems(std::vector<FloorItem> &items, Map &gameMap,
     items.clear();
     if (reachable.empty()) return;
 
-    ItemType possible[3] = { ITEM_HEALTH_POTION, ITEM_FIREBALL_SCROLL, ITEM_FREEZE_SCROLL };
+    ItemType possible[5] = { ITEM_HEALTH_POTION, ITEM_FIREBALL_SCROLL, ITEM_FREEZE_SCROLL, ITEM_TELEPORT_SCROLL, ITEM_RAGE_POTION };
     int count = 1 + rand() % 5; // 1-5 items per floor
 
     for (int i = 0; i < count; i++) {
@@ -100,7 +100,7 @@ void spawnItems(std::vector<FloorItem> &items, Map &gameMap,
             }
             if (conflict) continue;
 
-            ItemType t = possible[rand() % 3];
+            ItemType t = possible[rand() % 5];
             items.push_back(FloorItem(t, ix, iy));
             break;
         }
@@ -180,8 +180,9 @@ int main() {
 
   std::vector<FloorItem> floorItems;
   std::vector<Modifier> offeredModifiers;
-  int  modifierSelectIndex  = 0;
+  int  modifierSelectIndex   = 0;
   bool pendingModifierSelect = false;
+  int  pendingPlayerActions  = 1;
   bool isTargeting   = false;
   int  targetingSlot = -1;
   int  targetIndex   = 0;
@@ -228,6 +229,7 @@ int main() {
         gameMap.spawnStairsInRegion(reachable);
         spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
         spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
+        pendingPlayerActions = 1;
       }
     } else if (gameState == PLAYING) {
       transition.Update(dt);
@@ -309,6 +311,15 @@ int main() {
                   targetingSlot = i;
                   targetIndex   = 0;
                 }
+              } else if (player.inventory.slots[i] == ITEM_TELEPORT_SCROLL) {
+                int idx = rand() % (int)reachable.size();
+                player.setGridPosition((int)reachable[idx].x, (int)reachable[idx].y);
+                player.inventory.removeSlot(i);
+                combatLog.add("You vanish in a purple mist!");
+              } else if (player.inventory.slots[i] == ITEM_RAGE_POTION) {
+                player.ApplyRage(10);
+                player.inventory.removeSlot(i);
+                combatLog.add("Rage courses through you! (10 turns)");
               }
             }
           }
@@ -333,30 +344,44 @@ int main() {
               combatLog.add("You hit for " + std::to_string(playerResult) + " damage");
             }
 
-            // Enemies take their turn
-            for (int i = 0; i < (int)enemies.size(); i++) {
-              if (enemies[i].isAlive()) {
-                int dmg = enemies[i].takeTurn(
-                  player.getGridX(), player.getGridY(), gameMap, enemies);
-                if (dmg > 0) {
-                  player.applyDamage(dmg);
-                  combatLog.add("Enemy hits you for " + std::to_string(dmg));
-                  if (!player.isAlive()) {
-                    deathFloor    = currentFloor;
-                    gameState     = GAME_OVER;
-                    gameOverAlpha = 0.0f;
-                    break;
+            pendingPlayerActions--;
+
+            if (pendingPlayerActions <= 0) {
+              // Enemies take their turn
+              for (int i = 0; i < (int)enemies.size(); i++) {
+                if (enemies[i].isAlive()) {
+                  int dmg = enemies[i].takeTurn(
+                    player.getGridX(), player.getGridY(), gameMap, enemies);
+                  if (dmg > 0) {
+                    bool dodged = player.TakeDamage(dmg);
+                    if (dodged) {
+                      combatLog.add("You dodged the attack!");
+                      continue;
+                    }
+                    combatLog.add("Enemy hits you for " + std::to_string(dmg));
+                    if (!player.isAlive()) {
+                      deathFloor    = currentFloor;
+                      gameState     = GAME_OVER;
+                      gameOverAlpha = 0.0f;
+                      break;
+                    }
                   }
                 }
               }
-            }
 
-            // Remove dead enemies
-            std::vector<Enemy> alive;
-            for (int i = 0; i < (int)enemies.size(); i++) {
-              if (enemies[i].isAlive()) alive.push_back(enemies[i]);
+              // Remove dead enemies
+              std::vector<Enemy> alive;
+              for (int i = 0; i < (int)enemies.size(); i++) {
+                if (enemies[i].isAlive()) alive.push_back(enemies[i]);
+              }
+              enemies = alive;
+
+              // Roll actions for next round
+              pendingPlayerActions = 1;
+              float bonus = player.GetSpeedBonusChance();
+              if (bonus > 0.0f && GetRandomValue(0, 99) < (int)(bonus * 100))
+                pendingPlayerActions++;
             }
-            enemies = alive;
           }
         }
 
@@ -378,6 +403,7 @@ int main() {
           offeredModifiers      = generateModifierOffers();
           modifierSelectIndex   = 0;
           pendingModifierSelect = true;
+          pendingPlayerActions  = 1;
         }
       }
     } else if (gameState == MODIFIER_SELECT) {
@@ -405,11 +431,6 @@ int main() {
     }
 
     if (IsKeyPressed(KEY_THREE)) {
-        player.ApplyModifier({ ModifierType::FireRate, ModifierTier::Tier3 });
-        player.PrintStats();
-    }
-
-    if (IsKeyPressed(KEY_FOUR)) {
         player.ApplyModifier({ ModifierType::Luck, ModifierTier::Tier1 });
         player.PrintStats();
     }

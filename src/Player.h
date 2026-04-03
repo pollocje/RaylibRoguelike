@@ -18,7 +18,6 @@ private:
     // Base Stats (anchors for modifier recalculation)
     int baseHealth;
     float baseSpeed;
-    float baseFireRate;
     float baseLuck;
     float baseDodgeChance;
     float baseXPGainMultiplier;
@@ -27,13 +26,13 @@ private:
     int maxHealth;
     int currentHealth;
     float speed;
-    float fireRate;
     float luckChance;
     float dodgeChance;
     float xpGainMultiplier;
 
     // Combat
     int attack;
+    int rageTurnsRemaining;
 
     // Progression
     int xp;
@@ -66,8 +65,11 @@ public:
     // Gameplay methods
     void applyDamage(int amount);   // direct damage from enemies (no dodge roll)
     void heal(int amount);          // direct heal from items
-    void TakeDamage(int amount);    // player-initiated dodge roll then damage
+    bool TakeDamage(int amount);    // dodge roll then damage; returns true if dodged
     void Heal(int amount);          // alias for heal
+    void ApplyRage(int turns);     // rage lasts for N total turns
+    bool IsRaging() const { return rageTurnsRemaining > 0; }
+    int  GetRageTurnsRemaining() const { return rageTurnsRemaining; }
     void GainXP(int baseXP);
     int GetDamageOutput(int baseDamage) const;
 
@@ -86,7 +88,7 @@ public:
     int GetCurrentHealth() const { return currentHealth; }
     int GetMaxHealth() const     { return maxHealth; }
     float GetSpeed() const;
-    float GetFireRate() const;
+    float GetSpeedBonusChance() const; // 0.0 at base, +0.1 per Tier1 of Speed modifier
     int GetXP() const;
     int GetReputation() const;
     int GetLevel() const { return level; }

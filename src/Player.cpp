@@ -11,13 +11,13 @@ Player::Player() {
 
     baseHealth           = 100;
     baseSpeed            = 4.0f;
-    baseFireRate         = 1.0f;
     baseLuck             = 0.0f;
     baseDodgeChance      = 0.0f;
     baseXPGainMultiplier = 1.0f;
 
-    attack     = 10;
-    xp         = 0;
+    attack               = 10;
+    rageTurnsRemaining   = 0;
+    xp                   = 0;
     reputation = 0;
     level      = 0;
 
@@ -30,7 +30,6 @@ Player::Player() {
 void Player::RecalculateStats() {
     maxHealth        = baseHealth;
     speed            = baseSpeed;
-    fireRate         = baseFireRate;
     luckChance       = baseLuck;
     dodgeChance      = baseDodgeChance;
     xpGainMultiplier = baseXPGainMultiplier;
@@ -43,9 +42,6 @@ void Player::RecalculateStats() {
             break;
         case ModifierType::Health:
             maxHealth += (int)(baseHealth * value);
-            break;
-        case ModifierType::FireRate:
-            fireRate += baseFireRate * value;
             break;
         case ModifierType::Luck:
             luckChance += value;
@@ -86,8 +82,7 @@ void Player::DrawHUD() const {
     DrawText(TextFormat("Level: %d", level), 20, 20, 20, YELLOW);
     DrawText(TextFormat("Health: %d / %d", currentHealth, maxHealth), 20, 50, 20, WHITE);
     DrawText(TextFormat("Speed: %.2f", speed), 20, 80, 20, WHITE);
-    DrawText(TextFormat("Fire Rate: %.2f", fireRate), 20, 110, 20, WHITE);
-    DrawText(TextFormat("Luck: %.0f%%", luckChance * 100.0f), 20, 140, 20, WHITE);
+    DrawText(TextFormat("Luck: %.0f%%", luckChance * 100.0f), 20, 110, 20, WHITE);
     DrawText(TextFormat("Dodge: %.0f%%", dodgeChance * 100.0f), 20, 170, 20, WHITE);
     DrawText(TextFormat("XP Gain: +%.0f%%", (xpGainMultiplier - 1.0f) * 100.0f), 20, 200, 20, WHITE);
     DrawText(TextFormat("XP: %d", xp), 20, 230, 20, WHITE);
@@ -106,10 +101,14 @@ int Player::movement(Map& mapData, std::vector<Enemy>& enemies) {
 
     if (!keyPressed) return 0;
 
+    bool raging = rageTurnsRemaining > 0;
+    if (raging) rageTurnsRemaining--;
+
     // Bump attack: check if an enemy occupies the target tile
     for (int i = 0; i < (int)enemies.size(); i++) {
         if (enemies[i].isAlive() && enemies[i].gridX == newX && enemies[i].gridY == newY) {
             int dmg = (rand() % attack) + 1;
+            if (raging) dmg *= 3;
             enemies[i].takeDamage(dmg);
             return dmg;
         }
@@ -122,6 +121,10 @@ int Player::movement(Map& mapData, std::vector<Enemy>& enemies) {
     }
 
     return -1;
+}
+
+void Player::ApplyRage(int turns) {
+    rageTurnsRemaining += turns;
 }
 
 void Player::spawn(Map& mapData) {
@@ -150,12 +153,10 @@ void Player::heal(int amount) {
     if (currentHealth > maxHealth) currentHealth = maxHealth;
 }
 
-void Player::TakeDamage(int amount) {
-    if (TryDodge()) {
-        std::cout << "Attack dodged!" << std::endl;
-        return;
-    }
+bool Player::TakeDamage(int amount) {
+    if (TryDodge()) return true;
     applyDamage(amount);
+    return false;
 }
 
 void Player::Heal(int amount) {
@@ -192,7 +193,11 @@ bool Player::isAlive() const {
 }
 
 float Player::GetSpeed() const    { return speed; }
-float Player::GetFireRate() const { return fireRate; }
+
+float Player::GetSpeedBonusChance() const {
+    return (speed - baseSpeed) / baseSpeed;
+}
+
 int   Player::GetXP() const       { return xp; }
 int   Player::GetReputation() const { return reputation; }
 
@@ -201,7 +206,6 @@ void Player::PrintStats() const {
     std::cout << "Max Health:    " << maxHealth       << std::endl;
     std::cout << "Curr Health:   " << currentHealth   << std::endl;
     std::cout << "Speed:         " << speed           << std::endl;
-    std::cout << "Fire Rate:     " << fireRate        << std::endl;
     std::cout << "Luck Chance:   " << luckChance      << std::endl;
     std::cout << "Dodge Chance:  " << dodgeChance     << std::endl;
     std::cout << "XP Gain Multi: " << xpGainMultiplier << std::endl;
