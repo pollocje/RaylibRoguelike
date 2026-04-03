@@ -25,7 +25,7 @@ FetchContent_MakeAvailable(raylib)
 # Grab all cpp files in src
 file(GLOB SOURCES "src/*.cpp")
 
-add_executable(semGame ${SOURCES})
+add_executable(semGame ${SOURCES} "src/Modifiers.h")
 
 target_include_directories(semGame PRIVATE src)
 

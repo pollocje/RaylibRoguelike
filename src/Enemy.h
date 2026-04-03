@@ -24,7 +24,7 @@ public:
     int takeTurn(int playerX, int playerY, Map &mapData, std::vector<Enemy> &enemies);
 
 private:
-    bool canMoveTo(int tx, int ty, Map &mapData, std::vector<Enemy> &enemies);
+    bool canMoveTo(int tx, int ty, Map &mapData, std::vector<Enemy> &enemies, int playerX, int playerY);
 };
 
 #endif

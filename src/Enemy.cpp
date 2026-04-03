@@ -35,8 +35,9 @@ bool Enemy::isAlive() const {
 }
 
 // Helper: check if a tile is walkable and not occupied by another enemy
-bool Enemy::canMoveTo(int tx, int ty, Map &mapData, std::vector<Enemy> &enemies) {
+bool Enemy::canMoveTo(int tx, int ty, Map &mapData, std::vector<Enemy> &enemies, int playerX, int playerY) {
     if (!mapData.isCellWalkable(tx, ty)) return false;
+    if (tx == playerX && ty == playerY) return false;
     for (int i = 0; i < (int)enemies.size(); i++) {
         if (&enemies[i] != this && enemies[i].gridX == tx && enemies[i].gridY == ty)
             return false;
@@ -65,14 +66,14 @@ int Enemy::takeTurn(int playerX, int playerY, Map &mapData, std::vector<Enemy> &
 
     // Prefer moving along the larger axis, fall back to the other
     if (absDx >= absDy) {
-        if (stepX != 0 && canMoveTo(gridX + stepX, gridY, mapData, enemies))
+        if (stepX != 0 && canMoveTo(gridX + stepX, gridY, mapData, enemies, playerX, playerY))
             gridX += stepX;
-        else if (stepY != 0 && canMoveTo(gridX, gridY + stepY, mapData, enemies))
+        else if (stepY != 0 && canMoveTo(gridX, gridY + stepY, mapData, enemies, playerX, playerY))
             gridY += stepY;
     } else {
-        if (stepY != 0 && canMoveTo(gridX, gridY + stepY, mapData, enemies))
+        if (stepY != 0 && canMoveTo(gridX, gridY + stepY, mapData, enemies, playerX, playerY))
             gridY += stepY;
-        else if (stepX != 0 && canMoveTo(gridX + stepX, gridY, mapData, enemies))
+        else if (stepX != 0 && canMoveTo(gridX + stepX, gridY, mapData, enemies, playerX, playerY))
             gridX += stepX;
     }
 
