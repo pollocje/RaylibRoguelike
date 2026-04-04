@@ -7,6 +7,7 @@ std::string getItemName(ItemType type) {
         case ITEM_FREEZE_SCROLL:    return "Freeze Scroll";
         case ITEM_TELEPORT_SCROLL:  return "Teleport Scroll";
         case ITEM_RAGE_POTION:      return "Rage Potion";
+        case ITEM_TREASURE_CHEST:   return "Treasure Chest";
         default:                    return "Unknown";
     }
 }
@@ -18,6 +19,7 @@ Color getItemColor(ItemType type) {
         case ITEM_FREEZE_SCROLL:    return SKYBLUE;
         case ITEM_TELEPORT_SCROLL:  return PURPLE;
         case ITEM_RAGE_POTION:      return Color{200, 50, 0, 255};
+        case ITEM_TREASURE_CHEST:   return GOLD;
         default:                    return WHITE;
     }
 }
@@ -59,6 +61,18 @@ void drawFloorItem(ItemType type, int gridX, int gridY) {
             DrawCircle(cx, cy, 8, col);
             DrawCircleLines(cx, cy, 8, Color{120, 30, 0, 255});
             break;
+
+        case ITEM_TREASURE_CHEST: {
+            // Chest body
+            DrawRectangle(cx - 12, cy - 6, 24, 14, GOLD);
+            // Lid stripe
+            DrawRectangle(cx - 12, cy - 6, 24, 5, Color{180, 140, 0, 255});
+            // Lock
+            DrawRectangle(cx - 3, cy, 6, 5, Color{100, 80, 0, 255});
+            // Outline
+            DrawRectangleLines(cx - 12, cy - 6, 24, 14, DARKBROWN);
+            break;
+        }
 
         default:
             DrawCircle(cx, cy, 6, WHITE);

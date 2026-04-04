@@ -10,7 +10,8 @@ enum ItemType {
     ITEM_FIREBALL_SCROLL,
     ITEM_FREEZE_SCROLL,
     ITEM_TELEPORT_SCROLL,
-    ITEM_RAGE_POTION
+    ITEM_RAGE_POTION,
+    ITEM_TREASURE_CHEST
 };
 
 std::string getItemName(ItemType type);

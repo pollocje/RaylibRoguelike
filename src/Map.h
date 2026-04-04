@@ -50,6 +50,7 @@ public:
   void spawnStairsInRegion(std::vector<Vector2> &reachable, int playerX, int playerY);
   void drawStairs();
   void forceFloor(int x, int y);
+  void generateWinRoom();
 };
 
 #endif

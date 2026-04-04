@@ -233,3 +233,15 @@ void Map::forceFloor(int x, int y) {
     data[y][x] = 0;
   }
 }
+
+void Map::generateWinRoom() {
+  // Fill all with walls
+  for (int r = 0; r < rows; r++)
+    for (int c = 0; c < cols; c++)
+      data[r][c] = WALL;
+
+  // Carve out a large open room
+  for (int r = 2; r <= 15; r++)
+    for (int c = 2; c <= 22; c++)
+      data[r][c] = EMPTY;
+}

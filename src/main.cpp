@@ -20,7 +20,12 @@ const int screenHeight = 720;
 const int PANEL_WIDTH  = 280;
 const int MAP_AREA_W   = screenWidth - PANEL_WIDTH; // 1000px → 25 cols @ 40px
 
-enum GameState { MENU, CHARACTER_SELECT, PLAYING, MODIFIER_SELECT, GAME_OVER };
+enum GameState { MENU, CHARACTER_SELECT, PLAYING, MODIFIER_SELECT, GAME_OVER, WIN_ROOM };
+
+const int WIN_CHEST_X        = 19;
+const int WIN_CHEST_Y        = 8;
+const int WIN_PLAYER_START_X = 3;
+const int WIN_PLAYER_START_Y = 8;
 
 std::vector<Modifier> generateModifierOffers() {
     ModifierType allTypes[] = {
@@ -193,8 +198,16 @@ void drawPanel(int floor, Player &player, bool isTargeting, int targetingSlot,
 
 int main() {
   InitWindow(screenWidth, screenHeight, "semGame");
+  InitAudioDevice();
   SetTargetFPS(60);
   gFont = LoadFont("assets/fonts/PressStart2P.ttf");
+
+  Sound sndHitHurt  = LoadSound("assets/sfx/hitHurt.wav");
+  Sound sndTakeDmg  = LoadSound("assets/sfx/takeDmg.wav");
+  Sound sndSpell    = LoadSound("assets/sfx/spellCast.wav");
+  Sound sndPickUp   = LoadSound("assets/sfx/pickUp.wav");
+  Sound sndDescend  = LoadSound("assets/sfx/descend.wav");
+  Sound sndDeath    = LoadSound("assets/sfx/death.wav");
 
   GameState gameState = MENU;
   int currentFloor = 1;
@@ -206,6 +219,8 @@ int main() {
   std::vector<Modifier> offeredModifiers;
   int  modifierSelectIndex   = 0;
   bool pendingModifierSelect = false;
+  bool winChestPickedUp = false;
+  bool playerOnStairs   = false;
   int  pendingPlayerActions  = 1;
   bool isTargeting   = false;
   int  targetingSlot = -1;
@@ -290,11 +305,18 @@ int main() {
         }
 
         // Stairs collision
-        if (player.getGridX() == gameMap.stairsX &&
-            player.getGridY() == gameMap.stairsY) {
-          isTargeting = false;
-          transition.Start("The descent continues...");
+        bool onStairs = (player.getGridX() == gameMap.stairsX &&
+                         player.getGridY() == gameMap.stairsY);
+        if (onStairs && !playerOnStairs) {
+          if (!enemies.empty()) {
+            combatLog.add("Must defeat all enemies first!");
+          } else {
+            isTargeting = false;
+            PlaySound(sndDescend);
+            transition.Start("The descent continues...");
+          }
         }
+        playerOnStairs = onStairs;
 
         if (isTargeting) {
           if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_DOWN)) {
@@ -311,9 +333,11 @@ int main() {
             if (item == ITEM_FIREBALL_SCROLL) {
               enemies[targetIndex].takeDamage(25);
               combatLog.add("Fireball hits for 25 damage!");
+              PlaySound(sndSpell);
             } else if (item == ITEM_FREEZE_SCROLL) {
               enemies[targetIndex].applyFreeze(20);
               combatLog.add("Enemy is frozen for 20 turns!");
+              PlaySound(sndSpell);
             }
 
             player.inventory.removeSlot(targetingSlot);
@@ -336,6 +360,7 @@ int main() {
             if (player.inventory.useHealthPotion()) {
               player.heal(30);
               combatLog.add("You drink a potion, restoring 30 HP");
+              PlaySound(sndSpell);
             }
           }
 
@@ -354,10 +379,12 @@ int main() {
                 player.setGridPosition((int)reachable[idx].x, (int)reachable[idx].y);
                 player.inventory.removeSlot(i);
                 combatLog.add("You vanish in a purple mist!");
+                PlaySound(sndSpell);
               } else if (player.inventory.slots[i] == ITEM_RAGE_POTION) {
                 player.ApplyRage(10);
                 player.inventory.removeSlot(i);
                 combatLog.add("Rage courses through you! (10 turns)");
+                PlaySound(sndSpell);
               }
             }
           }
@@ -374,6 +401,7 @@ int main() {
               if (player.inventory.addItem(floorItems[i].type, charges)) {
                 floorItems[i].pickedUp = true;
                 combatLog.add("Picked up " + getItemName(floorItems[i].type));
+                PlaySound(sndPickUp);
               }
             }
           }
@@ -384,6 +412,7 @@ int main() {
           if (playerResult != 0) {
             if (playerResult > 0) {
               combatLog.add("You hit for " + std::to_string(playerResult) + " damage");
+              PlaySound(sndHitHurt);
             }
 
             pendingPlayerActions--;
@@ -401,10 +430,12 @@ int main() {
                       continue;
                     }
                     combatLog.add("Enemy hits you for " + std::to_string(dmg));
+                    PlaySound(sndTakeDmg);
                     if (!player.isAlive()) {
                       deathFloor    = currentFloor;
                       gameState     = GAME_OVER;
                       gameOverAlpha = 0.0f;
+                      PlaySound(sndDeath);
                       break;
                     }
                   }
@@ -435,17 +466,28 @@ int main() {
           currentFloor++;
           isTargeting = false;
           combatLog.clear();
-          combatLog.add("You descend to floor " + std::to_string(currentFloor));
-          gameMap.generate();
-          gameMap.forceFloor(player.getGridX(), player.getGridY());
-          reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
-          gameMap.spawnStairsInRegion(reachable, player.getGridX(), player.getGridY());
-          spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
-          spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
-          offeredModifiers      = generateModifierOffers();
-          modifierSelectIndex   = 0;
-          pendingModifierSelect = true;
-          pendingPlayerActions  = 1;
+
+          if (currentFloor > 10) {
+            // Enter the win room
+            gameMap.generateWinRoom();
+            player.setGridPosition(WIN_PLAYER_START_X, WIN_PLAYER_START_Y);
+            enemies.clear();
+            floorItems.clear();
+            winChestPickedUp = false;
+            gameState = WIN_ROOM;
+          } else {
+            combatLog.add("You descend to floor " + std::to_string(currentFloor));
+            gameMap.generate();
+            gameMap.forceFloor(player.getGridX(), player.getGridY());
+            reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
+            gameMap.spawnStairsInRegion(reachable, player.getGridX(), player.getGridY());
+            spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
+            spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
+            offeredModifiers      = generateModifierOffers();
+            modifierSelectIndex   = 0;
+            pendingModifierSelect = true;
+            pendingPlayerActions  = 1;
+          }
         }
       }
     } else if (gameState == MODIFIER_SELECT) {
@@ -459,6 +501,31 @@ int main() {
                       GetModifierTypeName(offeredModifiers[modifierSelectIndex].type) +
                       " " + GetModifierTierName(offeredModifiers[modifierSelectIndex].tier));
         gameState = PLAYING;
+      }
+    } else if (gameState == WIN_ROOM) {
+      if (!winChestPickedUp) {
+        std::vector<Enemy> noEnemies;
+        player.movement(gameMap, noEnemies);
+
+        if (player.getGridX() == WIN_CHEST_X && player.getGridY() == WIN_CHEST_Y) {
+          winChestPickedUp = true;
+        }
+      } else {
+        if (IsKeyPressed(KEY_ENTER)) {
+          // Reset and return to main menu
+          currentFloor         = 1;
+          isTargeting          = false;
+          winChestPickedUp     = false;
+          combatLog.clear();
+          gameMap.generate();
+          player = Player();
+          player.spawn(gameMap);
+          reachable = gameMap.getReachableFloorPositions(player.getGridX(), player.getGridY());
+          gameMap.spawnStairsInRegion(reachable, player.getGridX(), player.getGridY());
+          spawnEnemies(enemies, gameMap, currentFloor, player.getGridX(), player.getGridY(), reachable);
+          spawnItems(floorItems, gameMap, player.getGridX(), player.getGridY(), reachable);
+          gameState = MENU;
+        }
       }
     }
     // --- 2. DRAW PHASE (The Eyes) ---
@@ -632,11 +699,61 @@ int main() {
       int hintW = (int)MeasureTextEx(gFont, hint, 10, 1.0f).x;
       DrawTextEx(gFont, hint,
         {(float)(screenWidth / 2 - hintW / 2), (float)(cardY + cardH + 30)}, 10, 1.0f, GRAY);
+    } else if (gameState == WIN_ROOM) {
+      gameMap.drawMap();
+
+      // Draw treasure chest if not yet picked up
+      if (!winChestPickedUp) {
+        drawFloorItem(ITEM_TREASURE_CHEST, WIN_CHEST_X, WIN_CHEST_Y);
+      }
+
+      player.drawPlayer();
+
+      // "You Made It!" banner at top
+      const char* banner = "You Made It!";
+      int bannerW = (int)MeasureTextEx(gFont, banner, 28, 1.0f).x;
+      DrawTextEx(gFont, banner,
+        {(float)(MAP_AREA_W / 2 - bannerW / 2), 20.0f}, 28, 1.0f, GOLD);
+
+      if (!winChestPickedUp) {
+        const char* hint = "Find the treasure chest...";
+        int hintW = (int)MeasureTextEx(gFont, hint, 10, 1.0f).x;
+        DrawTextEx(gFont, hint,
+          {(float)(MAP_AREA_W / 2 - hintW / 2), (float)(screenHeight - 30)}, 10, 1.0f, GRAY);
+      } else {
+        // Win overlay
+        DrawRectangle(0, 0, MAP_AREA_W, screenHeight, Color{0, 0, 0, 180});
+
+        const char* wonStr = "YOU WON!";
+        int wonW = (int)MeasureTextEx(gFont, wonStr, 56, 1.0f).x;
+        DrawTextEx(gFont, wonStr,
+          {(float)(MAP_AREA_W / 2 - wonW / 2), (float)(screenHeight / 2 - 80)},
+          56, 1.0f, GOLD);
+
+        const char* subStr = "The dungeon has been conquered.";
+        int subW = (int)MeasureTextEx(gFont, subStr, 14, 1.0f).x;
+        DrawTextEx(gFont, subStr,
+          {(float)(MAP_AREA_W / 2 - subW / 2), (float)(screenHeight / 2 + 10)},
+          14, 1.0f, WHITE);
+
+        const char* enterStr = "Press ENTER to return to menu";
+        int enterW = (int)MeasureTextEx(gFont, enterStr, 12, 1.0f).x;
+        DrawTextEx(gFont, enterStr,
+          {(float)(MAP_AREA_W / 2 - enterW / 2), (float)(screenHeight / 2 + 50)},
+          12, 1.0f, GRAY);
+      }
     }
 
     EndDrawing();
   }
 
+  UnloadSound(sndHitHurt);
+  UnloadSound(sndTakeDmg);
+  UnloadSound(sndSpell);
+  UnloadSound(sndPickUp);
+  UnloadSound(sndDescend);
+  UnloadSound(sndDeath);
+  CloseAudioDevice();
   UnloadFont(gFont);
   CloseWindow();
   return 0;
