@@ -13,7 +13,6 @@ Player::Player() {
     baseSpeed            = 4.0f;
     baseLuck             = 0.0f;
     baseDodgeChance      = 0.0f;
-    baseXPGainMultiplier = 1.0f;
 
     attack               = 10;
     rageTurnsRemaining   = 0;
@@ -21,7 +20,6 @@ Player::Player() {
     classColor           = BLUE;
     classShape           = 0;
     xp                   = 0;
-    reputation = 0;
     level      = 0;
 
     currentHealth = baseHealth;
@@ -35,7 +33,6 @@ void Player::RecalculateStats() {
     speed            = baseSpeed;
     luckChance       = baseLuck;
     dodgeChance      = baseDodgeChance;
-    xpGainMultiplier = baseXPGainMultiplier;
 
     for (const Modifier& mod : activeModifiers) {
         float value = GetModifierValue(mod.type, mod.tier);
@@ -51,9 +48,6 @@ void Player::RecalculateStats() {
             break;
         case ModifierType::Dodge:
             dodgeChance += value;
-            break;
-        case ModifierType::XPGain:
-            xpGainMultiplier += value;
             break;
         }
     }
@@ -88,8 +82,7 @@ void Player::DrawHUD() const {
     DrawText(TextFormat("Speed: %.2f", speed), 20, 80, 20, WHITE);
     DrawText(TextFormat("Luck: %.0f%%", luckChance * 100.0f), 20, 110, 20, WHITE);
     DrawText(TextFormat("Dodge: %.0f%%", dodgeChance * 100.0f), 20, 170, 20, WHITE);
-    DrawText(TextFormat("XP Gain: +%.0f%%", (xpGainMultiplier - 1.0f) * 100.0f), 20, 200, 20, WHITE);
-    DrawText(TextFormat("XP: %d", xp), 20, 230, 20, WHITE);
+    DrawText(TextFormat("XP: %d", xp), 20, 200, 20, WHITE);
 }
 
 // Returns 0 = no action, -1 = moved/bumped wall, >0 = damage dealt to enemy
@@ -113,6 +106,7 @@ int Player::movement(Map& mapData, std::vector<Enemy>& enemies) {
         if (enemies[i].isAlive() && enemies[i].gridX == newX && enemies[i].gridY == newY) {
             int dmg = (rand() % attack) + 1;
             if (raging) dmg *= 3;
+            dmg = GetDamageOutput(dmg);
             enemies[i].takeDamage(dmg);
             return dmg;
         }
@@ -192,11 +186,6 @@ void Player::Heal(int amount) {
     heal(amount);
 }
 
-void Player::GainXP(int baseXP) {
-    int rewardedXP = GetXPReward(baseXP);
-    xp += rewardedXP;
-    reputation += rewardedXP / 10;
-}
 
 int Player::GetDamageOutput(int baseDamage) const {
     if (TryDoubleDamage()) return baseDamage * 2;
@@ -213,10 +202,6 @@ bool Player::TryDoubleDamage() const {
     return roll < luckChance;
 }
 
-int Player::GetXPReward(int baseXP) const {
-    return (int)(baseXP * xpGainMultiplier);
-}
-
 bool Player::isAlive() const {
     return currentHealth > 0;
 }
@@ -228,7 +213,6 @@ float Player::GetSpeedBonusChance() const {
 }
 
 int   Player::GetXP() const       { return xp; }
-int   Player::GetReputation() const { return reputation; }
 
 void Player::PrintStats() const {
     std::cout << "----- Player Stats (Level " << level << ") -----" << std::endl;
@@ -237,7 +221,5 @@ void Player::PrintStats() const {
     std::cout << "Speed:         " << speed           << std::endl;
     std::cout << "Luck Chance:   " << luckChance      << std::endl;
     std::cout << "Dodge Chance:  " << dodgeChance     << std::endl;
-    std::cout << "XP Gain Multi: " << xpGainMultiplier << std::endl;
     std::cout << "XP:            " << xp              << std::endl;
-    std::cout << "Reputation:    " << reputation      << std::endl;
 }

@@ -34,13 +34,6 @@ float GetModifierValue(ModifierType type, ModifierTier tier) {
         }
         break;
 
-    case ModifierType::XPGain:
-        switch (tier) {
-        case ModifierTier::Tier1: return 0.10f;
-        case ModifierTier::Tier2: return 0.20f;
-        case ModifierTier::Tier3: return 0.30f;
-        }
-        break;
     }
 
     return 0.0f;
@@ -52,7 +45,6 @@ const char* GetModifierTypeName(ModifierType type) {
     case ModifierType::Health:   return "Health";
     case ModifierType::Luck:     return "Luck";
     case ModifierType::Dodge:    return "Dodge";
-    case ModifierType::XPGain:   return "XP Gain";
     }
     return "Unknown";
 }

@@ -30,10 +30,10 @@ const int WIN_PLAYER_START_Y = 8;
 std::vector<Modifier> generateModifierOffers() {
     ModifierType allTypes[] = {
         ModifierType::Speed, ModifierType::Health,
-        ModifierType::Luck,  ModifierType::Dodge,  ModifierType::XPGain
+        ModifierType::Luck,  ModifierType::Dodge
     };
     // Shuffle types via Fisher-Yates
-    for (int i = 4; i > 0; i--) {
+    for (int i = 3; i > 0; i--) {
         int j = rand() % (i + 1);
         ModifierType tmp = allTypes[i]; allTypes[i] = allTypes[j]; allTypes[j] = tmp;
     }
@@ -188,7 +188,6 @@ void drawPanel(int floor, Player &player, bool isTargeting, int targetingSlot,
     drawStat("Speed Bonus:  +", player.GetSpeedBonusChance() * 100.0f, "%", SKYBLUE);
     drawStat("Dodge:         ", player.GetDodgeChance()      * 100.0f, "%", GREEN);
     drawStat("Luck:          ", player.GetLuckChance()        * 100.0f, "%", GOLD);
-    drawStat("XP Gain:      +", (player.GetXPGainMultiplier() - 1.0f) * 100.0f, "%", YELLOW);
 
     if (player.IsRaging()) {
         std::string rageText = "Rage:          " + std::to_string(player.GetRageTurnsRemaining()) + " turns";

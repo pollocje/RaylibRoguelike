@@ -5,8 +5,7 @@ enum class ModifierType {
     Speed,
     Health,
     Luck,
-    Dodge,
-    XPGain
+    Dodge
 };
 
 enum class ModifierTier {

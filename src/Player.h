@@ -20,7 +20,6 @@ private:
     float baseSpeed;
     float baseLuck;
     float baseDodgeChance;
-    float baseXPGainMultiplier;
 
     // Current/Modified Stats
     int maxHealth;
@@ -28,7 +27,6 @@ private:
     float speed;
     float luckChance;
     float dodgeChance;
-    float xpGainMultiplier;
 
     // Combat
     int attack;
@@ -41,7 +39,6 @@ private:
 
     // Progression
     int xp;
-    int reputation;
     int level;
 
     // Accumulated modifiers (stacks across levels)
@@ -77,13 +74,11 @@ public:
     bool IsRaging() const { return rageTurnsRemaining > 0; }
     bool IsMage()   const { return isMage; }
     int  GetRageTurnsRemaining() const { return rageTurnsRemaining; }
-    void GainXP(int baseXP);
     int GetDamageOutput(int baseDamage) const;
 
     // Utility
     bool TryDodge() const;
     bool TryDoubleDamage() const;
-    int GetXPReward(int baseXP) const;
     bool isAlive() const;
 
     // Getters (lowercase match existing call sites in main.cpp)
@@ -98,9 +93,7 @@ public:
     float GetSpeedBonusChance() const;
     float GetDodgeChance() const     { return dodgeChance; }
     float GetLuckChance() const      { return luckChance; }
-    float GetXPGainMultiplier() const { return xpGainMultiplier; }
     int GetXP() const;
-    int GetReputation() const;
     int GetLevel() const { return level; }
 
     void PrintStats() const;

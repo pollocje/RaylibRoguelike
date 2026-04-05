@@ -17,9 +17,9 @@ MainMenu::MainMenuButtons MainMenu::Update() {
 
   // WrapAround Mechanics
   if (selectedButton < 1) {
-    selectedButton = 3;
+    selectedButton = 2;
   }
-  if (selectedButton > 3) {
+  if (selectedButton > 2) {
     selectedButton = 1;
   }
 
@@ -28,8 +28,6 @@ MainMenu::MainMenuButtons MainMenu::Update() {
     if (selectedButton == 1)
       return START;
     if (selectedButton == 2)
-      return OPTIONS;
-    if (selectedButton == 3)
       return EXIT;
   }
 
@@ -40,8 +38,7 @@ void MainMenu::Draw() {
 
   // create color coded variables to switch depdendant on selectedButton #
   Color startColor = (selectedButton == 1) ? RED : WHITE;
-  Color optColor = (selectedButton == 2) ? RED : WHITE;
-  Color exitColor = (selectedButton == 3) ? RED : WHITE;
+  Color exitColor = (selectedButton == 2) ? RED : WHITE;
 
   // Title
   int titleW = (int)MeasureTextEx(gFont, "Rogue!", 32, 1.0f).x;
@@ -51,11 +48,7 @@ void MainMenu::Draw() {
   int startW = (int)MeasureTextEx(gFont, "Start", 20, 1.0f).x;
   DrawTextEx(gFont, "Start", {(float)(640 - startW / 2), 200.0f}, 20, 1.0f, startColor);
 
-  // OPTIONS
-  int optW = (int)MeasureTextEx(gFont, "Options", 20, 1.0f).x;
-  DrawTextEx(gFont, "Options", {(float)(640 - optW / 2), 270.0f}, 20, 1.0f, optColor);
-
   // EXIT
   int exitW = (int)MeasureTextEx(gFont, "Exit", 20, 1.0f).x;
-  DrawTextEx(gFont, "Exit", {(float)(640 - exitW / 2), 340.0f}, 20, 1.0f, exitColor);
+  DrawTextEx(gFont, "Exit", {(float)(640 - exitW / 2), 270.0f}, 20, 1.0f, exitColor);
 }

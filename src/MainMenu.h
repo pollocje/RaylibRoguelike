@@ -6,7 +6,7 @@ private:
   int selectedButton = 0;
 
 public:
-  enum MainMenuButtons { NONE, START, OPTIONS, EXIT };
+  enum MainMenuButtons { NONE, START, EXIT };
 
   // Constructor
   MainMenu();
