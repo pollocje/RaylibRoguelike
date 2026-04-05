@@ -41,8 +41,8 @@ void MainMenu::Draw() {
   Color exitColor = (selectedButton == 2) ? RED : WHITE;
 
   // Title
-  int titleW = (int)MeasureTextEx(gFont, "Rogue!", 32, 1.0f).x;
-  DrawTextEx(gFont, "Rogue!", {(float)(640 - titleW / 2), 100.0f}, 32, 1.0f, WHITE);
+  int titleW = (int)MeasureTextEx(gFont, "Raylib Roguelike", 32, 1.0f).x;
+  DrawTextEx(gFont, "Raylib Roguelike", {(float)(640 - titleW / 2), 100.0f}, 32, 1.0f, WHITE);
 
   // START
   int startW = (int)MeasureTextEx(gFont, "Start", 20, 1.0f).x;
