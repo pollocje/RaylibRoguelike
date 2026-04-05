@@ -1,0 +1,963 @@
+================================================================================
+  RAYLIB ROGUELIKE - COMPLETE CODEBASE STUDY GUIDE
+================================================================================
+
+All source files are in: src/
+  Headers:  Player.h  Enemy.h  Map.h  Item.h  Inventory.h
+            Modifiers.h  CombatLog.h  MainMenu.h  Transition.h  GameFont.h
+  Sources:  Player.cpp  Enemy.cpp  Map.cpp  Item.cpp  Inventory.cpp
+            Modifiers.cpp  CombatLog.cpp  MainMenu.cpp  Transition.cpp  main.cpp
+
+================================================================================
+  GAME FLOW (BIG PICTURE)
+================================================================================
+
+1. Main Menu      -> press Start
+2. Character Select -> choose Warrior / Rogue / Mage, press Enter
+3. Playing        -> explore dungeon, fight enemies, pick up items
+                     reach the stairs (all enemies must be dead first)
+4. Transition     -> animated text + black screen between floors
+5. Modifier Select -> choose one of 3 stat-upgrade cards
+   (steps 3-5 repeat for floors 1-10)
+6. Win Room       -> floor 11: walk to the treasure chest to win
+7. Victory screen -> press Enter to return to Main Menu
+
+If the player dies at any point -> GAME_OVER screen -> returns to Character Select.
+
+
+================================================================================
+  FILE 1: GameFont.h
+================================================================================
+
+PURPOSE
+  Single header that declares a global Raylib Font variable so every file can
+  use the same loaded font without passing it around.
+
+CONTENT
+  extern Font gFont;
+    - A Raylib Font object.
+    - The actual font (PressStart2P.ttf) is loaded once in main.cpp.
+    - Every other .cpp file that needs to draw text includes this header and
+      uses gFont directly.
+
+
+================================================================================
+  FILE 2: Modifiers.h / Modifiers.cpp
+================================================================================
+
+PURPOSE
+  Defines the progression system: after each floor the player chooses a stat
+  upgrade (modifier). These accumulate throughout the run.
+
+--------------------------------------------------------------------------------
+ENUM: ModifierType
+  Speed   - increases movement speed
+  Health  - increases maximum HP
+  Luck    - chance to deal double damage
+  Dodge   - chance to completely avoid incoming damage
+
+ENUM: ModifierTier
+  Tier1   - weakest bonus
+  Tier2   - medium bonus
+  Tier3   - strongest bonus
+
+STRUCT: Modifier
+  ModifierType type   - which stat this modifier boosts
+  ModifierTier tier   - how strong the boost is
+
+--------------------------------------------------------------------------------
+FUNCTION: float GetModifierValue(ModifierType type, ModifierTier tier)
+  Returns the numeric value for a given type+tier combination.
+  Values:
+    Speed:  Tier1=0.5,  Tier2=1.0,  Tier3=1.5   (added to base speed of 4.0)
+    Health: Tier1=25,   Tier2=50,   Tier3=75     (added to base HP)
+    Luck:   Tier1=0.05, Tier2=0.10, Tier3=0.15  (5/10/15% chance to 2x damage)
+    Dodge:  Tier1=0.10, Tier2=0.15, Tier3=0.20  (10/15/20% chance to negate dmg)
+
+FUNCTION: const char* GetModifierTypeName(ModifierType type)
+  Returns a human-readable string: "Speed", "Health", "Luck", or "Dodge".
+  Used on the modifier selection screen.
+
+FUNCTION: const char* GetModifierTierName(ModifierTier tier)
+  Returns: "Tier I", "Tier II", or "Tier III".
+  Used on the modifier selection screen.
+
+
+================================================================================
+  FILE 3: Item.h / Item.cpp
+================================================================================
+
+PURPOSE
+  Defines the item types that can appear on dungeon floors, how they look when
+  drawn, and a struct to track each floor item's state.
+
+--------------------------------------------------------------------------------
+ENUM: ItemType
+  ITEM_NONE            - placeholder / empty slot
+  ITEM_HEALTH_POTION   - restores 30 HP; stacks up to 3
+  ITEM_FIREBALL_SCROLL - deals 25 damage to a targeted enemy
+  ITEM_FREEZE_SCROLL   - freezes a targeted enemy for 20 turns
+  ITEM_TELEPORT_SCROLL - instantly moves player to a random reachable floor tile
+  ITEM_RAGE_POTION     - grants 10 turns of triple damage
+  ITEM_TREASURE_CHEST  - used only in the win room; picking it up triggers victory
+
+--------------------------------------------------------------------------------
+FUNCTION: std::string getItemName(ItemType type)
+  Returns the display name (e.g. "Health Potion") used in the inventory panel.
+
+FUNCTION: Color getItemColor(ItemType type)
+  Returns the Raylib Color associated with each item (used for inventory slot
+  background tinting).
+
+FUNCTION: void drawFloorItem(ItemType type, int gridX, int gridY)
+  Renders the item on the dungeon floor at the given grid coordinates.
+  Each item has a distinct visual shape:
+    Health Potion   -> red filled circle (radius 7)
+    Fireball Scroll -> orange upward-pointing triangle
+    Freeze Scroll   -> blue/cyan diamond (4-point polygon rotated 45 degrees)
+    Teleport Scroll -> purple pentagon
+    Rage Potion     -> red circle with an outer ring (flask silhouette)
+    Treasure Chest  -> gold rectangle with a darker stripe lid and a lock dot
+
+--------------------------------------------------------------------------------
+STRUCT: FloorItem
+  ItemType type   - what kind of item this is
+  int gridX       - grid column where the item sits
+  int gridY       - grid row where the item sits
+  bool pickedUp   - false while on the floor, set to true when the player
+                    steps on it (main.cpp then skips drawing/colliding with it)
+
+  Constructor: FloorItem(ItemType t, int x, int y)
+    Sets type, gridX, gridY, and pickedUp=false.
+
+
+================================================================================
+  FILE 4: Inventory.h / Inventory.cpp
+================================================================================
+
+PURPOSE
+  Manages the player's carried items. Health potions have their own stack slot;
+  scrolls and special items share three general-purpose slots.
+
+--------------------------------------------------------------------------------
+CONSTANTS
+  GENERAL_SLOTS = 3    - number of general item slots (displayed as 1/2/3 in UI)
+  MAX_POTIONS   = 3    - maximum health potions the player can carry at once
+
+--------------------------------------------------------------------------------
+MEMBER VARIABLES
+  ItemType slots[GENERAL_SLOTS]    - the item in each slot (ITEM_NONE if empty)
+  int slotCharges[GENERAL_SLOTS]   - remaining uses for the item in each slot
+                                     Mages start scrolls with 2 charges;
+                                     non-Mages get 1 charge.
+  int healthPotions                - count of stacked health potions (0-3)
+
+--------------------------------------------------------------------------------
+METHODS
+
+  Inventory()
+    Sets all slots to ITEM_NONE, all slotCharges to 1, healthPotions to 0.
+
+  bool addItem(ItemType type, int charges = 1)
+    Attempts to add an item to the inventory.
+    - If type == ITEM_HEALTH_POTION: increments healthPotions if below MAX_POTIONS.
+    - Otherwise: scans slots[] for the first ITEM_NONE slot and places the item
+      there with the given charge count.
+    Returns true if the item was successfully stored, false if there was no room.
+
+  void removeSlot(int index)
+    Decrements slotCharges[index] by 1.
+    If charges reach 0, sets slots[index] back to ITEM_NONE.
+    Called after a scroll or potion is used from a slot.
+
+  bool useHealthPotion()
+    If healthPotions > 0, decrements it and returns true (caller applies the
+    30 HP heal). Returns false if no potions are held.
+
+  bool hasRoom(ItemType type) const
+    Returns true if the inventory can accept one more of this item type.
+    Health Potion: checks healthPotions < MAX_POTIONS.
+    Everything else: checks if any slot is ITEM_NONE.
+
+  bool requiresTargeting(int slot) const
+    Returns true for ITEM_FIREBALL_SCROLL and ITEM_FREEZE_SCROLL (player must
+    pick a target enemy before the item activates).
+    Returns false for everything else (Teleport, Rage Potion are instant).
+
+
+================================================================================
+  FILE 5: CombatLog.h / CombatLog.cpp
+================================================================================
+
+PURPOSE
+  A scrolling text feed shown in the right-side UI panel that records combat
+  events, item pickups, spell casts, and other messages.
+
+--------------------------------------------------------------------------------
+CONSTANT
+  MAX_MESSAGES = 12   - maximum number of messages visible at once
+
+--------------------------------------------------------------------------------
+MEMBER VARIABLES (private)
+  std::vector<std::string> messages
+    Stores the log entries. Index 0 is the newest message.
+    When the list exceeds MAX_MESSAGES the oldest entry is removed.
+
+--------------------------------------------------------------------------------
+METHODS
+
+  CombatLog()
+    Default constructor; messages vector starts empty.
+
+  void add(std::string message)
+    Inserts the message at the front (index 0).
+    If size > MAX_MESSAGES, removes the last element.
+    Called from main.cpp whenever something noteworthy happens.
+
+  void draw(int x, int y, int width) const
+    Renders the log panel at pixel position (x, y) within a box of the given
+    width. Draws:
+      - "Combat Log" as a title
+      - A horizontal separator line
+      - Each message 16 px apart, with alpha fading from 255 (newest) down to
+        roughly 50 (oldest) so recent events stand out.
+
+  void clear()
+    Empties the messages vector. Called when starting a new game.
+
+
+================================================================================
+  FILE 6: MainMenu.h / MainMenu.cpp
+================================================================================
+
+PURPOSE
+  Renders and processes input for the main menu screen (Start / Exit).
+
+--------------------------------------------------------------------------------
+ENUM: MainMenuButtons
+  NONE   - nothing selected this frame
+  START  - player pressed Enter on "Start"
+  EXIT   - player pressed Enter on "Exit"
+
+--------------------------------------------------------------------------------
+MEMBER VARIABLES (private)
+  int selectedButton
+    Tracks which button is highlighted: 1 = Start, 2 = Exit.
+    Initialized to 1 in the constructor.
+
+--------------------------------------------------------------------------------
+METHODS
+
+  MainMenu()
+    Sets selectedButton = 1.
+
+  MainMenuButtons Update()
+    Called every frame while in MENU state.
+    - Up/Down arrow keys move selectedButton (wraps between 1 and 2).
+    - Enter key returns START or EXIT based on current selectedButton.
+    - Otherwise returns NONE.
+
+  void Draw()
+    Renders the menu:
+      - "Rogue!" title centred near the top.
+      - "Start" and "Exit" buttons centred below.
+      - The currently selected button is drawn in RED; the other in WHITE.
+
+
+================================================================================
+  FILE 7: Transition.h / Transition.cpp
+================================================================================
+
+PURPOSE
+  Manages the animated floor-transition effect: screen fades to black, text
+  types out character-by-character, pauses, then fades back in. Also signals
+  main.cpp when it is safe to swap to the new dungeon floor.
+
+--------------------------------------------------------------------------------
+ENUM: State (private)
+  IDLE        - no transition active
+  FADING_OUT  - black overlay alpha increasing (0 -> 1)
+  TYPING      - text appears one character at a time
+  PAUSE       - full text displayed, holding before fade-in
+  FADING_IN   - black overlay alpha decreasing (1 -> 0)
+
+--------------------------------------------------------------------------------
+MEMBER VARIABLES (private)
+  State state          - current phase of the transition
+  float alpha          - opacity of the black overlay (0.0 transparent, 1.0 opaque)
+  std::string fullText     - the complete message to type out
+  std::string displayedText - the portion of fullText typed so far
+  int letterCount      - how many characters have been typed
+  float timer          - elapsed time counter used in TYPING and PAUSE phases
+  float typeSpeed      - seconds between each typed character (0.04s = 25 chars/sec)
+  float pauseDuration  - seconds to hold the full text before fading in (1.0s)
+  bool mapSwapped      - ensures ShouldSwapMap() only returns true once per
+                         transition
+
+--------------------------------------------------------------------------------
+METHODS
+
+  Transition()
+    Initialises all members. state = IDLE.
+
+  void Start(std::string text)
+    Begins a new transition with the given message.
+    Resets all counters, sets state = FADING_OUT.
+    Called from main.cpp when the player steps on the stairs.
+
+  void Update(float dt)
+    Advances the transition each frame (dt = delta time in seconds).
+    - FADING_OUT: alpha += dt * 2.5. When alpha >= 1.0 -> TYPING.
+    - TYPING:     every typeSpeed seconds, appends one character to displayedText.
+                  When all characters are typed -> PAUSE. Also sets mapSwapped=false
+                  to arm ShouldSwapMap().
+    - PAUSE:      timer counts up to pauseDuration -> FADING_IN.
+    - FADING_IN:  alpha -= dt * 2.5. When alpha <= 0.0 -> IDLE.
+
+  void Draw()
+    Draws a black rectangle over the screen with the current alpha.
+    During TYPING, PAUSE, and FADING_IN phases also draws displayedText centred.
+
+  bool IsActive() const
+    Returns true if state != IDLE. main.cpp uses this to block gameplay input
+    while the animation plays.
+
+  bool ShouldSwapMap()
+    Returns true exactly once per transition, when the screen is fully black at
+    the start of the TYPING phase (mapSwapped is false).
+    Sets mapSwapped = true immediately so it won't fire again.
+    main.cpp polls this every frame to know when to generate the new floor.
+
+  State GetState() const
+    Returns the current State enum value.
+
+
+================================================================================
+  FILE 8: Map.h / Map.cpp
+================================================================================
+
+PURPOSE
+  Procedural dungeon generation (cellular automata), rendering, and utility
+  queries (walkability, reachable positions, stair placement).
+
+--------------------------------------------------------------------------------
+MEMBER VARIABLES
+
+  Private:
+    int cellW, cellH         - size in pixels of each grid cell (both 40)
+    int rows, cols           - grid dimensions (18 rows x 25 cols for main game)
+    std::vector<std::vector<int>> data
+                             - 2D grid where 1 = wall and 0 = floor
+
+  Public:
+    const int EMPTY = 0      - floor tile value (used by other files)
+    const int WALL  = 1      - wall tile value
+    int stairsX, stairsY    - grid position of the down-stairs tile
+
+--------------------------------------------------------------------------------
+METHODS
+
+  Map(int screenWidth, int screenHeight)
+    Constructor. Calculates rows/cols from screen size and cellH/cellW.
+    Allocates the 2D data grid (all walls initially).
+    Seeds the random number generator.
+    Calls generate() to build the first dungeon.
+
+  void initRandom()
+    Fills every cell randomly: 45% chance of wall, 55% chance of floor.
+    This is the "noisy" starting state before smoothing.
+
+  void refine()
+    One pass of cellular automata smoothing.
+    For each interior cell: if 4 or more of its 8 neighbours (plus itself,
+    so up to 9 total) are walls, the cell becomes a wall; otherwise floor.
+    Produces natural-looking cave shapes.
+
+  void generate()
+    Full generation pipeline:
+      1. initRandom()  - randomise grid
+      2. refine() x 5  - smooth five times to produce connected cave rooms
+
+  void drawGrid(int width, int height)
+    Debug helper. Draws faint green grid lines over the play area.
+    Not called during normal gameplay.
+
+  void drawMap()
+    Renders the dungeon by drawing white edge-lines on every wall cell that
+    borders a floor cell. Gives a clean outline style instead of filled tiles.
+
+  bool isCellWalkable(int targetX, int targetY)
+    Returns true if (targetX, targetY) is within bounds and is a floor cell.
+    Used by Player, Enemy, and main.cpp for movement validation.
+
+  Vector2 getRandomFloorGridPos()
+    Returns a random floor cell that has at least 4 floor neighbours (so the
+    player/enemy won't get stuck in a tiny pocket). Tries 500 random positions;
+    falls back to any floor cell if none qualify.
+
+  std::vector<Vector2> getReachableFloorPositions(int startX, int startY)
+    BFS flood-fill from (startX, startY).
+    Returns every floor cell reachable from the start without crossing walls.
+    Used to ensure enemies, items, and stairs don't spawn in unreachable areas.
+
+  void spawnStairs()
+    Places the stairs at a random floor position anywhere on the map.
+    (Simpler version used occasionally; spawnStairsInRegion is preferred.)
+
+  void spawnStairsInRegion(std::vector<Vector2>& reachable, int playerX, int playerY)
+    Places the stairs somewhere in the reachable set.
+    Prefers tiles with Manhattan distance >= 8 from the player so the stairs
+    are never right next to the spawn point.
+
+  void drawStairs()
+    Draws the stairs tile as a small purple square with the letter "S" on it.
+
+  void forceFloor(int x, int y)
+    Sets data[y][x] = 0 (floor).
+    Used when transitioning floors to guarantee the player's starting cell
+    is walkable even if generation placed a wall there.
+
+  void generateWinRoom()
+    Overwrites the map with a special hand-crafted rectangular room used for
+    the final victory floor. All cells become walls first, then a sub-rectangle
+    (rows 2-15 wide, cols 2-22 wide) is cleared to floor.
+
+
+================================================================================
+  FILE 9: Enemy.h / Enemy.cpp
+================================================================================
+
+PURPOSE
+  Represents a dungeon enemy. Handles its own drawing, taking damage, and
+  AI turn logic (pathfinding + melee attack).
+
+--------------------------------------------------------------------------------
+MEMBER VARIABLES (all public)
+  int gridX, gridY     - current position on the dungeon grid
+  int health           - current HP (starts at 10)
+  int maxHealth        - maximum HP (10, constant)
+  int attack           - base damage: 2 + floor number (so harder on deeper floors)
+  int frozenTurns      - turns remaining while frozen; 0 means not frozen
+
+--------------------------------------------------------------------------------
+METHODS
+
+  Enemy(int x, int y, int floor)
+    Constructor. Sets position, attack = 2 + floor, maxHealth = health = 10,
+    frozenTurns = 0.
+
+  void applyFreeze(int turns)
+    Sets frozenTurns = turns. While frozen the enemy skips its turn.
+    Called when the player uses a Freeze Scroll on this enemy.
+
+  void draw() const
+    Renders the enemy as a filled circle.
+    Colour: SKYBLUE if frozen (frozenTurns > 0), RED otherwise.
+    Also draws a small health bar above the circle (white background, red fill
+    proportional to health / maxHealth).
+
+  void takeDamage(int amount)
+    Subtracts amount from health. health can go below 0.
+    main.cpp checks isAlive() and removes dead enemies.
+
+  bool isAlive() const
+    Returns health > 0.
+
+  int takeTurn(int playerX, int playerY, Map& mapData, std::vector<Enemy>& enemies)
+    The AI logic, called once per player action.
+    1. If frozenTurns > 0: decrement and return 0 (no action).
+    2. If adjacent to player (Manhattan distance == 1):
+         return rand() % attack + 1  (damage between 1 and attack)
+    3. Otherwise: try to move one step closer to the player.
+         - Prefers moving along whichever axis has the larger distance gap.
+         - Falls back to the other axis if the preferred move is blocked.
+         - Uses canMoveTo() to validate each candidate tile.
+         - Returns 0 (moved, did not attack).
+
+  [Private] bool canMoveTo(int tx, int ty, Map& mapData,
+                            std::vector<Enemy>& enemies,
+                            int playerX, int playerY)
+    Returns true if the tile at (tx, ty) is:
+      - Within bounds and a floor tile (isCellWalkable).
+      - Not currently occupied by the player.
+      - Not currently occupied by any other enemy.
+
+
+================================================================================
+  FILE 10: Player.h / Player.cpp
+================================================================================
+
+PURPOSE
+  The player character. Tracks position, stats, modifiers, inventory, and class.
+  Handles rendering, HUD display, movement input, combat, and item use.
+
+--------------------------------------------------------------------------------
+MEMBER VARIABLES
+
+  Private:
+    int gridX, gridY         - current grid position
+    int baseHealth           - starting max HP before modifiers (set by class)
+    float baseSpeed          - starting speed before modifiers (set by class)
+    float baseLuck           - always 0.0 (luck comes entirely from modifiers)
+    float baseDodgeChance    - base dodge before modifiers (set by class)
+    int maxHealth            - current max HP after all modifiers applied
+    int currentHealth        - HP remaining
+    float speed              - current speed after modifiers
+    float luckChance         - current luck% (capped at 95%)
+    float dodgeChance        - current dodge% (capped at 95%)
+    int attack               - base damage per hit (10, unmodified)
+    int rageTurnsRemaining   - turns left of rage mode; 0 = not raging
+    bool isMage              - true if player chose Mage class
+    Color classColor         - RED (Warrior), GREEN (Rogue), BLUE (Mage)
+    int classShape           - 0=circle, 1=triangle, 2=diamond (visual only)
+    int xp                   - accumulated experience points
+    int level                - current level (incremented by main.cpp on kill)
+    std::vector<Modifier> activeModifiers
+                             - all modifiers chosen throughout the run;
+                               persists across floors; drives RecalculateStats()
+
+  Public:
+    Inventory inventory      - the player's item inventory (directly accessible)
+
+--------------------------------------------------------------------------------
+METHODS
+
+  Player()
+    Constructor. Sets baseHealth=100, baseSpeed=4.0, attack=10, position (0,0),
+    all chances to 0, rageTurnsRemaining=0, isMage=false.
+    Calls RecalculateStats() to initialise derived stats.
+
+  void drawPlayer()
+    Renders the player as a 24x24 rectangle in classColor at (gridX*40, gridY*40).
+
+  void DrawHUD()
+    Draws the stats panel in the top-left:
+      Level, Health (current/max), Speed, Luck%, Dodge%, XP.
+
+  int movement(Map& mapData, std::vector<Enemy>& enemies)
+    Processes arrow key / WASD input.
+    - Calculates the intended new position.
+    - If new position is walkable and empty: moves the player, returns -1.
+    - If new position contains an enemy: performs bump attack.
+        Damage = GetDamageOutput(attack).  Returns damage dealt.
+    Does NOT move or attack if no valid key is pressed (returns 0).
+
+  void spawn(Map& mapData)
+    Places the player at a random floor tile (via getRandomFloorGridPos()).
+
+  void setGridPosition(int x, int y)
+    Directly sets gridX and gridY. Used when loading the win room.
+
+  void ApplyModifier(const Modifier& modifier)
+    Appends the modifier to activeModifiers, then calls RecalculateStats().
+
+  void ApplyCharacterClass(float hpMult, float atkMult, float dodgeMult,
+                            float spdMult, bool mage)
+    Multiplies base stats by class-specific factors.
+    Sets isMage flag. Calls RecalculateStats().
+    Called once from main.cpp during character selection.
+
+  void ResetStatsToBase()
+    Clears activeModifiers, resets base stats to their initial values,
+    calls RecalculateStats(). Used on new-game reset.
+
+  void IncrementLevel()
+    Increments the level counter. Called by main.cpp when an enemy dies.
+
+  void applyDamage(int amount)
+    Subtracts amount from currentHealth directly (no dodge roll).
+    Used internally and for debug/special cases.
+
+  void heal(int amount)
+    Adds amount to currentHealth, capped at maxHealth.
+
+  bool TakeDamage(int amount)
+    The normal "take a hit" path.
+    1. Calls TryDodge(). If true: returns true (dodged, no damage taken).
+    2. Otherwise: calls applyDamage(amount), returns false.
+
+  void Heal(int amount)
+    Public alias for heal(). Called when the player uses a Health Potion.
+
+  void ApplyRage(int turns)
+    Adds turns to rageTurnsRemaining. While raging, GetDamageOutput triples
+    the base damage before the luck roll.
+
+  bool IsRaging() const
+    Returns rageTurnsRemaining > 0.
+
+  bool IsMage() const
+    Returns the isMage flag. Used by main.cpp to give Mage 2 scroll charges.
+
+  int GetRageTurnsRemaining() const
+    Returns rageTurnsRemaining.
+
+  int GetDamageOutput(int baseDamage) const
+    Calculates actual damage for one attack.
+    1. If raging: baseDamage *= 3; decrements rageTurnsRemaining.
+    2. Calls TryDoubleDamage(). If true: baseDamage *= 2 (luck proc).
+    Returns final damage value.
+
+  bool TryDodge() const
+    Rolls a random float [0,1] against dodgeChance.
+    Returns true if the roll is below the threshold (dodge succeeds).
+
+  bool TryDoubleDamage() const
+    Rolls a random float [0,1] against luckChance.
+    Returns true if the roll succeeds (deal double damage this hit).
+
+  bool isAlive() const
+    Returns currentHealth > 0.
+
+  int getGridX() const, int getGridY() const
+    Return current grid coordinates.
+
+  int getHealth() const, int getMaxHealth() const
+    Return currentHealth and maxHealth (lowercase versions).
+
+  int GetCurrentHealth() const, int GetMaxHealth() const
+    CamelCase aliases for the above (both spellings used in different parts of
+    main.cpp).
+
+  float GetSpeed() const
+    Returns current speed value.
+
+  float GetSpeedBonusChance() const
+    Returns (speed - baseSpeed) / baseSpeed as a 0-1 fraction.
+    Used to roll for an extra player action after the enemies' turns.
+
+  float GetDodgeChance() const, float GetLuckChance() const
+    Return current dodge and luck percentages (0.0 - 0.95).
+
+  int GetXP() const, int GetLevel() const
+    Return accumulated XP and current level.
+
+  void PrintStats() const
+    Outputs all stats to stdout. Used for debugging only.
+
+  [Private] void RecalculateStats()
+    Recomputes all derived stats from base values + activeModifiers.
+    Iterates activeModifiers:
+      - Speed:  speed += modifier value (additive)
+      - Health: maxHealth += (int) modifier value
+      - Luck:   luckChance += modifier value
+      - Dodge:  dodgeChance += modifier value
+    Clamps luckChance and dodgeChance to 95%.
+    Ensures currentHealth does not exceed the new maxHealth.
+    Called after every modifier change or class application.
+
+
+================================================================================
+  FILE 11: main.cpp  (the game orchestrator)
+================================================================================
+
+PURPOSE
+  Entry point and main game loop. Creates all game objects, manages the state
+  machine, processes input, drives all updates, and coordinates rendering.
+
+--------------------------------------------------------------------------------
+GLOBAL CONSTANTS
+  screenWidth  = 1280   - window width in pixels
+  screenHeight = 720    - window height in pixels
+  PANEL_WIDTH  = 280    - right-side UI panel width in pixels
+  MAP_AREA_W   = 1000   - playable dungeon area (screenWidth - PANEL_WIDTH)
+
+  WIN_CHEST_X  = 19     - grid column of the victory treasure chest
+  WIN_CHEST_Y  = 8      - grid row of the victory treasure chest
+  WIN_PLAYER_START_X = 3  - player column when the win room loads
+  WIN_PLAYER_START_Y = 8  - player row when the win room loads
+
+--------------------------------------------------------------------------------
+GAME STATE ENUM
+  MENU             - main menu screen
+  CHARACTER_SELECT - class choice screen
+  PLAYING          - active dungeon gameplay
+  MODIFIER_SELECT  - choose a stat upgrade between floors
+  GAME_OVER        - death screen (fade in, press Enter to restart)
+  WIN_ROOM         - final room (reach the chest to win)
+
+--------------------------------------------------------------------------------
+HELPER FUNCTIONS
+
+  std::vector<Modifier> generateModifierOffers()
+    Builds a vector of exactly 3 Modifier objects.
+    Each has a random ModifierType (0-3) and a random ModifierTier (0-2).
+    The three offers are independent (repeats possible but rare).
+    Called whenever the player descends a floor.
+
+  void spawnEnemies(std::vector<Enemy>& enemies, Map& gameMap, int floor,
+                    int playerX, int playerY, std::vector<Vector2>& reachable)
+    Clears the enemies list.
+    Number of enemies = 3 + (floor / 3):
+      floor 1-2 -> 3 enemies
+      floor 3-5 -> 4 enemies
+      floor 6-8 -> 5 enemies
+      floor 9-10-> 6 enemies
+    Each enemy is placed on a random tile from the reachable set that is not
+    the player's tile, not the stairs, and not occupied by another enemy.
+    Up to 200 placement attempts per enemy to avoid conflicts.
+
+  void spawnItems(std::vector<FloorItem>& items, Map& gameMap,
+                  int playerX, int playerY, std::vector<Vector2>& reachable)
+    Clears the items list.
+    Spawns 1-5 items, each a random type from:
+      ITEM_HEALTH_POTION, ITEM_FIREBALL_SCROLL, ITEM_FREEZE_SCROLL,
+      ITEM_TELEPORT_SCROLL, ITEM_RAGE_POTION
+    Same conflict-checking logic as spawnEnemies.
+
+  void drawPanel(int floor, Player& player, bool isTargeting,
+                 int targetingSlot, CombatLog& combatLog)
+    Renders the entire right-side UI panel (x = MAP_AREA_W, width = PANEL_WIDTH).
+    Contents from top to bottom:
+      - Dark grey background
+      - "ROGUE!" title
+      - "Floor: N" text
+      - HP bar (red fill, white outline, numeric label)
+      - Inventory section: 3 general slots + health potion count
+          Each slot shows item name and remaining charges.
+          The active targeting slot is highlighted yellow.
+      - Combat log (via combatLog.draw())
+      - Stats section: Speed Bonus%, Dodge%, Luck%, Rage turns remaining
+
+--------------------------------------------------------------------------------
+MAIN FUNCTION  (main())
+
+INITIALISATION
+  - InitWindow / InitAudioDevice (1280x720, 60 FPS target)
+  - Load gFont from PressStart2P.ttf
+  - Load Sound effects:
+      hitHurt   - played when the player deals damage
+      takeDmg   - played when the player takes damage
+      spellCast - played when a scroll is used
+      pickUp    - played when an item is picked up
+      descend   - played when the player descends stairs
+      death     - played on player death
+  - Create: Map gameMap, Player player, CombatLog combatLog, MainMenu mainMenu,
+            Transition transition
+  - Vectors: enemies, items, modifierOffers
+  - State variables: gameState=MENU, currentFloor=1, pendingPlayerActions,
+                     isTargeting, targetingSlot, targetIndex, etc.
+  - Perform initial BFS to get reachable positions
+  - Spawn starting enemies and items
+
+GAME LOOP  (while !WindowShouldClose())
+
+  --- UPDATE ---
+
+  STATE: MENU
+    Call mainMenu.Update().
+    If START returned: transition to CHARACTER_SELECT.
+    If EXIT returned: break (quit).
+
+  STATE: CHARACTER_SELECT
+    Left/Right arrow keys cycle selectedClass (0=Warrior, 1=Rogue, 2=Mage).
+    Enter key applies the class and transitions to PLAYING:
+      Warrior: hpMult=2.0, atkMult=1.0, dodgeMult=1.25, spdMult=1.0, mage=false
+      Rogue:   hpMult=1.0, atkMult=1.5, dodgeMult=2.0,  spdMult=1.5, mage=false
+      Mage:    hpMult=0.5, atkMult=0.75, dodgeMult=1.0, spdMult=1.0, mage=true
+    After applying class: spawn player, BFS for reachable, spawn enemies+items.
+
+  STATE: PLAYING
+    transition.Update(dt) runs every frame regardless of other input.
+
+    Transition mid-point (ShouldSwapMap() true):
+      - If floor > 10: generateWinRoom(), place player at win start, gameState=WIN_ROOM.
+      - Else:
+          Increment currentFloor.
+          gameMap.generate() -> new dungeon.
+          gameMap.forceFloor(player position) -> ensure start tile is walkable.
+          BFS for reachable.
+          gameMap.spawnStairsInRegion(reachable, player position).
+          spawnEnemies / spawnItems.
+          Generate modifierOffers.
+          pendingModifierSelect = true.
+
+    After transition ends (transition not active && pendingModifierSelect):
+      gameState = MODIFIER_SELECT.
+
+    When transition is NOT active (normal gameplay):
+
+      Space bar: regenerate map (debug feature, not shown in UI).
+
+      Stairs collision (player on stairsX/stairsY):
+        If enemies still alive: log "Clear the floor first!" message.
+        Else: PlaySound(descend), transition.Start("Descending to floor N+1").
+
+      Targeting mode (isTargeting == true):
+        Left/Right arrow: cycle targetIndex among living enemies.
+        Escape: cancel targeting.
+        Press same number key as targetingSlot:
+          Fireball: deal 25 damage to target enemy, PlaySound(spellCast).
+          Freeze:   applyFreeze(20) on target enemy, PlaySound(spellCast).
+          inventory.removeSlot(targetingSlot).
+          Log the action. isTargeting = false.
+
+      Normal mode:
+        H key: useHealthPotion() -> Heal(30), PlaySound(pickUp), log it.
+        Keys 1/2/3: activate inventory slot:
+          If requires targeting and enemies exist: enter targeting mode.
+          Teleport: pick random reachable tile, setGridPosition, log it.
+          Rage Potion: ApplyRage(10), log it.
+          removeSlot() after use.
+
+        Auto-pickup: check all FloorItem positions against player position.
+          If match and not pickedUp: try addItem(); if success mark pickedUp,
+          PlaySound(pickUp), log it.
+
+        Player movement (movement() call):
+          Returns -1: player moved (no combat this turn).
+          Returns >0: player attacked an enemy (damage dealt), PlaySound(hitHurt),
+            remove dead enemies, IncrementLevel, award XP, log it.
+
+        If an action was taken (moved or attacked): decrement pendingPlayerActions.
+        If pendingPlayerActions <= 0 (all player actions used):
+          Reset pendingPlayerActions = 1.
+          Enemy turns: each enemy calls takeTurn(); if damage > 0:
+            TakeDamage on player, PlaySound(takeDmg), log it.
+          If player dead: PlaySound(death), gameState = GAME_OVER.
+          Remove dead enemies.
+          Speed bonus extra action:
+            Roll GetSpeedBonusChance() chance to add 1 to pendingPlayerActions
+            (faster characters can act again before enemies).
+
+  STATE: MODIFIER_SELECT
+    Left/Right arrow: cycle selectedModifier (0-2).
+    Enter: ApplyModifier(modifierOffers[selected]), gameState = PLAYING.
+
+  STATE: GAME_OVER
+    Increment deathFadeAlpha (fade in the death screen).
+    Enter key when alpha >= 1.0:
+      Reset player (ResetStatsToBase), new map, new enemies, clear combat log.
+      currentFloor = 1, gameState = CHARACTER_SELECT.
+
+  STATE: WIN_ROOM
+    Player movement works normally (no enemies to fight).
+    If player reaches (WIN_CHEST_X, WIN_CHEST_Y): showWinOverlay = true.
+    Enter key when overlay shown:
+      Reset everything, gameState = MENU.
+
+  --- DRAW ---
+
+  STATE: MENU
+    mainMenu.Draw()
+
+  STATE: CHARACTER_SELECT
+    Three side-by-side hero cards for Warrior / Rogue / Mage.
+    Each card shows: name, stat description, visual shape preview.
+    Selected card is drawn with a bright highlight border.
+
+  STATE: PLAYING
+    gameMap.drawMap()
+    For each FloorItem not pickedUp: drawFloorItem()
+    For each Enemy alive: enemy.draw()
+    If isTargeting: draw crosshair "X" over the current target enemy
+    player.drawPlayer()
+    drawPanel(floor, player, isTargeting, targetingSlot, combatLog)
+    transition.Draw()  (overlays transition animation on top of everything)
+
+  STATE: MODIFIER_SELECT
+    Black background.
+    Three modifier cards side by side.
+    Each shows: type name, tier name, numeric value, a colour swatch.
+    Selected card is highlighted.
+
+  STATE: GAME_OVER
+    Black background with "YOU DIED" and "Reached floor N" text, fading in.
+
+  STATE: WIN_ROOM
+    gameMap.drawMap()
+    drawFloorItem(ITEM_TREASURE_CHEST, WIN_CHEST_X, WIN_CHEST_Y)
+    player.drawPlayer()
+    If showWinOverlay: draw "YOU WIN!" overlay with instructions.
+
+
+================================================================================
+  ARCHITECTURE OVERVIEW
+================================================================================
+
+  main.cpp (state machine, orchestrator)
+  |
+  +-- MainMenu        (menu UI)
+  +-- Transition      (floor-transition animation)
+  +-- Map             (dungeon generation & queries)
+  |     uses: BFS, cellular automata
+  +-- Player          (player state & combat)
+  |     contains: Inventory
+  |     uses:     Modifier, Map, Enemy
+  +-- Enemy[]         (AI, pathfinding, combat)
+  |     uses:     Map, Enemy[] (collision), Player position
+  +-- FloorItem[]     (items lying on the floor)
+  +-- CombatLog       (event message display)
+  +-- Modifier/Item   (data types used by Player & Inventory)
+
+KEY INTERACTIONS
+  Player <-> Enemy    : bump attack; enemy pathfinds toward player; dodge/luck rolls
+  Player <-> Map      : movement validation via isCellWalkable()
+  Player <-> Inventory: auto-pickup adds items; key presses consume them
+  Inventory <-> Item  : ItemType enum links floor items to inventory slots
+  Player <-> Modifier : modifiers accumulate each floor; RecalculateStats() updates all
+  Map <-> BFS         : reachable positions ensure enemies/items/stairs are accessible
+  Transition -> main  : ShouldSwapMap() gates the floor-swap at the right moment
+  All events -> CombatLog: add() called for every attack, pickup, spell, and death
+
+
+================================================================================
+  COMPLETE GAME MECHANICS REFERENCE
+================================================================================
+
+CLASSES
+  Warrior  - 2x HP, normal attack, +25% dodge, normal speed. Very tanky.
+  Rogue    - normal HP, 1.5x attack, 2x dodge, 1.5x speed. Fast glass cannon.
+  Mage     - 0.5x HP, 0.75x attack, normal dodge/speed. All scrolls get 2 charges.
+
+COMBAT SEQUENCE (per player action)
+  1. Player presses movement key.
+  2. If target tile has an enemy: GetDamageOutput(attack) calculates damage.
+       - If raging: base damage x3, decrement rageTurnsRemaining.
+       - TryDoubleDamage(): luckChance% to x2 the damage.
+  3. Enemy's health reduced; if <= 0 it is removed.
+  4. pendingPlayerActions decremented.
+  5. If pendingPlayerActions <= 0:
+       a. Each living enemy calls takeTurn():
+            - Frozen enemies skip.
+            - Adjacent enemies deal 1..attack damage.
+            - Other enemies step one tile closer.
+       b. For each enemy that dealt damage: TakeDamage() called on player.
+            - TryDodge(): dodgeChance% to negate the hit entirely.
+            - Otherwise currentHealth -= damage.
+       c. Player death check.
+       d. Speed bonus roll: GetSpeedBonusChance()% chance to grant +1 action.
+
+MODIFIERS (accumulate across the whole run)
+  Speed  Tier1 +0.5 | Tier2 +1.0 | Tier3 +1.5   (base speed = 4.0)
+  Health Tier1 +25  | Tier2 +50  | Tier3 +75     (base depends on class)
+  Luck   Tier1 +5%  | Tier2 +10% | Tier3 +15%    (caps at 95%)
+  Dodge  Tier1 +10% | Tier2 +15% | Tier3 +20%    (caps at 95%)
+
+ITEMS
+  Health Potion   H key  - instant +30 HP (up to 3 stacked)
+  Fireball Scroll 1/2/3  - 25 damage to targeted enemy (1 charge; 2 for Mage)
+  Freeze Scroll   1/2/3  - freeze target for 20 turns  (1 charge; 2 for Mage)
+  Teleport Scroll 1/2/3  - random teleport              (1 charge; 2 for Mage)
+  Rage Potion     1/2/3  - +10 rage turns (3x damage)   (1 charge; 2 for Mage)
+
+MAP GENERATION
+  Grid: 25 columns x 18 rows, each cell 40x40 pixels.
+  Step 1 - initRandom(): each cell 45% wall / 55% floor.
+  Step 2 - refine() x5: if >=4 of 8 neighbours (+ self) are walls -> becomes wall.
+  Result: organic cave-like rooms connected by corridors.
+
+FLOOR PROGRESSION
+  Floors 1-10 are procedurally generated caves.
+  Floor 11 is a hand-crafted win room with the treasure chest.
+  Enemy count:  3 + floor/3  (integer division).
+  Enemy attack: 2 + floor number (scales with depth).
+  After each floor the player picks one of three random modifier offers.
+
+VICTORY & DEATH
+  Victory: reach treasure chest in the win room (floor 11).
+  Death:   currentHealth <= 0 at any point; returns to character select.
+
+================================================================================
+  END OF GUIDE
+================================================================================
