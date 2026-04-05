@@ -17,6 +17,7 @@ FetchContent_Declare(
     raylib
     GIT_REPOSITORY https://github.com/raysan5/raylib.git
     GIT_TAG 5.5
+    GIT_SHALLOW TRUE
 )
 
 FetchContent_MakeAvailable(raylib)
@@ -24,7 +25,9 @@ FetchContent_MakeAvailable(raylib)
 # Grab all cpp files in src
 file(GLOB SOURCES "src/*.cpp")
 
-add_executable(semGame ${SOURCES})
+add_executable(semGame ${SOURCES} "src/Modifiers.h")
+
+target_include_directories(semGame PRIVATE src)
 
 target_link_libraries(semGame PRIVATE raylib)
 
@@ -32,3 +35,9 @@ target_link_libraries(semGame PRIVATE raylib)
 if (WIN32)
     target_link_libraries(semGame PRIVATE winmm)
 endif()
+
+# Copy assets folder next to the exe after each build
+add_custom_command(TARGET semGame POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/assets
+    $<TARGET_FILE_DIR:semGame>/assets)

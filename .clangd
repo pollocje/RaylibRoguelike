@@ -1,3 +1,2 @@
 CompileFlags:
-  Add:
-    - "-IC:/raylib/raylib/src"
+  CompilationDatabase: build
